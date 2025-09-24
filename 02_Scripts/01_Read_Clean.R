@@ -11,7 +11,6 @@
 # ============================================================
 
 
-
 rm(list = ls())
 gc()
 
@@ -55,7 +54,7 @@ clean_data <- raw_data %>%
 library(dplyr)
 
 # ------------------------------
-# rename variables
+# Rename variables
 # ------------------------------
 data_renamed <- clean_data %>%
   # Rename variables for clarity and consistency
@@ -74,61 +73,57 @@ data_renamed <- clean_data %>%
     platform_helper             = hv_auswahl_plattform,
     
     # Information use
-    info_politics_society       = f2_1_1,
-    info_lifestyle              = f2_2_1,
-    info_specific_needs         = f2_3_1,
-    info_problem_solving        = f2_4_1,
-    info_personal_interests     = f2_5_1,
-    info_hobbies                = f2_6_1,
-    info_close_social_circle    = f2_7_1,
-    info_extended_social_circle = f2_8_1,
+    undirected_news             = f2_1_1,
+    undirected_life             = f2_2_1,
+    problem_specific_need       = f2_3_1,
+    problem_solving             = f2_4_1,
+    topic_interests             = f2_5_1,
+    topic_hobbies               = f2_6_1,
+    group_close                 = f2_7_1,
+    group_extended              = f2_8_1,
     
     # Perceptions of social media
-    sm_suggestions_useful       = f3_1_1,
-    sm_targeted_content_annoying = f3_2_1,
-    sm_nonchronological_feed_useful = f3_3_1,
-    sm_repeated_topics_annoying = f3_4_1,
-    sm_agree_completely         = f3_99_1,
-    sm_customize_useful         = f4_1_1,
-    sm_block_accounts_useful    = f4_2_1,
-    sm_follow_accounts_useful   = f4_3_1,
-    sm_repeated_from_followed_annoying = f4_4_1,
-    sm_discover_new_info_useful = f5_1_1,
-    sm_unplanned_info_annoying  = f5_2_1,
-    sm_unsearched_info_useful   = f5_3_1,
-    sm_shared_info_useful       = f5_4_1,
-    sm_lack_of_control          = f5_5_1,
-    sm_likes_comments_helpful   = f6_1_1,
-    sm_comments_annoying        = f6_2_1,
-    sm_friend_interactions_useful = f6_3_1,
-    sm_comments_enriching       = f6_4_1,
-    sm_friends_likes_comments_annoying = f6_5_1,
-    sm_disagree_completely      = f6_99_1,
+    implicit_1                  = f3_1_1,
+    implicit_2                  = f3_2_1,
+    implicit_3                  = f3_3_1,
+    implicit_4                  = f3_4_1,
+    attention_check_1           = f3_99_1,
+    explicit_1                  = f4_1_1,
+    explicit_2                  = f4_2_1,
+    explicit_3                  = f4_3_1,
+    explicit_4                  = f4_4_1,
+    incidentalness_1            = f5_1_1,
+    incidentalness_2            = f5_2_1,
+    incidentalness_3            = f5_3_1,
+    incidentalness_4            = f5_4_1,
+    incidentalness_5            = f5_5_1,
+    sociality_1                 = f6_1_1,
+    sociality_2                 = f6_2_1,
+    sociality_3                 = f6_3_1,
+    sociality_4                 = f6_4_1,
+    sociality_5                 = f6_5_1,
+    attention_check_2           = f6_99_1,
     
-    # Usage patterns
-    sm_read_superficial         = f7_1_1,
-    sm_use_for_info             = f7_2_1,
-    sm_browse_while_waiting     = f7_3_1,
-    sm_read_completely          = f7_4_1,
-    sm_scroll_quickly           = f7_5_1,
-    sm_consider_reading         = f7_6_1,
-    sm_click_links_often        = f7_7_1,
-    sm_short_sessions           = f7_8_1,
-    
-    # Interactions
-    sm_like_post                = f8_1_1,
-    sm_comment_post             = f8_2_1,
-    sm_share_post               = f8_3_1,
-    sm_forward_post_privately   = f8_4_1,
-    
-    # Control settings
-    sm_block_user               = f9_1,
-    sm_follow_user              = f9_2,
-    sm_connect_request          = f9_3,
-    sm_change_settings_more     = f9_4,
-    sm_change_settings_less     = f9_5,
-    sm_interact_for_more        = f9_6,
-    sm_none_of_the_above        = f9_90,
+    # Practices on social media
+    snacking_1                  = f7_1_1,
+    snacking_2                  = f7_2_1,
+    snacking_3                  = f7_3_1,
+    snacking_4                  = f7_4_1,
+    snacking_5                  = f7_5_1,
+    snacking_6                  = f7_6_1,
+    snacking_7                  = f7_7_1,
+    snacking_8                  = f7_8_1,
+    engagement_1                = f8_1_1,
+    engagement_2                = f8_2_1,
+    engagement_3                = f8_3_1,
+    engagement_4                = f8_4_1,
+    curation_1                  = f9_1,
+    curation_2                  = f9_2,
+    curation_3                  = f9_3,
+    curation_4                  = f9_4,
+    curation_5                  = f9_5,
+    curation_6                  = f9_6,
+    curation_7                  = f9_90,
     
     # Socio-demographics
     gender                      = p_geschlecht,
@@ -147,7 +142,7 @@ data_renamed <- clean_data %>%
     household_income            = p_haushaltsnettoeinkommen
   )
 
-# Prüfen
+# Check
 glimpse(data_renamed)
 
 
