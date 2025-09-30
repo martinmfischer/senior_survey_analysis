@@ -29,20 +29,23 @@ clean_data <- readRDS("01_Data/social_media_2025_clean_renamed.rds")
 # Recode reverse-coded items
 # ------------------------------
 
-# Create vector of all items that need to be reverse-coded ----------------
+data_rev <- clean_data %>% reverse_scale(implicit_2,
+                             implicit_4,
+                             explicit_4,
+                             incidentalness_2,
+                             incidentalness_5,
+                             sociality_2,
+                             sociality_5,
+                             snacking_2,
+                             snacking_4,
+                             snacking_6,
+                             snacking_7,
+                             ### select lower and upper bound for recode
+                             lower_end = 5,
+                             upper_end = 1)
 
-rev_items <- c(
-  "implicit_2","implicit_4",
-  "explicit_4",
-  "incidentalness_2","incidentalness_5",
-  "sociality_2","sociality_5",
-  "snacking_2","snacking_4","snacking_6","snacking_7"
-)
 
-# Reverse-code items using helper function "reverse_likert"
 
-data_rev <- clean_data %>%
-  mutate(across(all_of(rev_items), ~ reverse_likert(.x), .names = "{.col}_rev"))
 
 # ------------------------------
 # Compute reliability + mean indices

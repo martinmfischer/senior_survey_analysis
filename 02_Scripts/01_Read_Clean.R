@@ -50,8 +50,10 @@ clean_data <- raw_data %>%
   # example: trim whitespace in character vars
   dplyr::mutate(across(where(is.character), str_trim))
 
-
-library(dplyr)
+clean_data <- clean_data %>%
+  mutate(across(where(is.numeric), ~ na_if(.x, -99)))
+clean_data <- clean_data %>%
+  mutate(across(where(is.numeric), ~ na_if(.x, 99)))
 
 # ------------------------------
 # Rename variables
