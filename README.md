@@ -9,4 +9,10 @@ The study examines:
 3. Predictors of social media information use (RQ3)  
 4. Predictors of navigation, engagement, and curation practices (RQ4)  
 
+
+# How to run
+
+- Execute each script as they are numbered
+- Output goes to 03_Output and 04_Figures
+
 ---
