@@ -48,6 +48,11 @@ df <- df %>%
     TRUE ~ NA_real_                           # sonst NA
   ))
 
+df <- df %>%
+  mutate(platform_helper = factor(platform_helper,
+                                  levels = 1:5,
+                                  labels = c("Facebook", "Instagram", "X", "TikTok", "YouTube")))
+
 # -------------------------
 # Create Directories -------
 # -------------------------
