@@ -68,6 +68,16 @@ omega_h <- function(df, items) {
 
 # Drop-one rule: if ωh < thr (o.7), test scale without each item 
 choose_items_by_omega <- function(df, items, thr = 0.7) {
+  if (length(items) <= 2) {
+    return(list(
+      items_used = items,
+      omega_h = NA_real_,
+      dropped = NA_character_,
+      note = "Omega-h nicht berechenbar bei <= 2 Items"
+    ))
+  }
+  
+  
   base <- omega_h(df, items)
   if (!is.na(base) && base >= thr) {
     return(list(items_used = items, omega_h = base, dropped = NA_character_))

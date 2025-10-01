@@ -17,7 +17,8 @@
 if (!require("pacman")) install.packages("pacman")
 rm(list = ls())
 gc()
-pacman::p_load(tidyverse, tidycomm)
+
+pacman::p_load(tidyverse, tidycomm, purrr)
 
 # Load helper functions (to_fac, to_num)
 source("02_Scripts/Helpers.R")  # Load functions
@@ -86,6 +87,41 @@ data_idx %>% get_reliability(type = "hierarchical")
 data_idx %>% get_reliability(idx_info_undirected, idx_info_topic,
                              idx_info_problem, idx_info_group, type = "alpha")
 
+
+## Two indices are critical, below omega of .7
+# Check if dropping items improves omega for each scale
+
+
+
+scales <- list(
+  implicit  = c("implicit_1", "implicit_2_rev", "implicit_3", "implicit_4_rev"),
+  explicit  = c("explicit_1", "explicit_2", "explicit_3", "explicit_4_rev"),
+  incidentalness = c("incidentalness_1", "incidentalness_2_rev", "incidentalness_3", "incidentalness_4", "incidentalness_5_rev"),
+  sociality = c("sociality_1", "sociality_2_rev", "sociality_3", "sociality_4", "sociality_5_rev"),
+  snacking  = c("snacking_1", "snacking_2_rev", "snacking_3", "snacking_4_rev", "snacking_5", "snacking_6_rev", "snacking_7_rev", "snacking_8"),
+  engagement = c("engagement_1", "engagement_2", "engagement_3", "engagement_4"),
+  curation   = c("curation_1", "curation_2", "curation_3", "curation_4", "curation_5", "curation_6", "curation_7"),
+  info_undirected = c("undirected_news", "undirected_life"),
+  info_topic      = c("topic_interests", "topic_hobbies"),
+  info_problem    = c("problem_specific_need", "problem_solving"),
+  info_group      = c("group_close", "group_extended")
+)
+
+
+
+results <- imap_dfr(scales, ~ {
+  res <- choose_items_by_omega(data_rev, .x, thr = 0.7)
+  tibble(
+    scale = .y,
+    omega_h = res$omega_h,
+    items_used = paste(res$items_used, collapse = ", "),
+    dropped = ifelse(is.na(res$dropped), "-", res$dropped)
+  )
+})
+
+results
+
+
 # ------------------------------
 # Recode gender + education
 # ------------------------------
@@ -119,6 +155,13 @@ data_idx <- data_idx %>%
     ),
     gender_binary = factor(gender_binary, levels = c("non-female","female"))
   )
+
+
+# ------------------------------
+# Save scored data for regression
+# ------------------------------
+saveRDS(data_idx, file = file.path("01_Data", "social_media_2025_scored.rds"))
+
 
 # --------------------------------------------------------------
 # Sociodemographic composition and characteristics of the sample

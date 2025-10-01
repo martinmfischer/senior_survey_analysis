@@ -1,2 +1,8 @@
 *.png
 *.csv
+
+# Alles ignorieren
+*
+
+# Aber die .gitignore selbst nicht ignorieren
+!.gitignore

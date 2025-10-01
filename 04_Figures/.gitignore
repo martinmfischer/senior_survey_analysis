@@ -1,1 +1,7 @@
 *.png
+
+# Alles ignorieren
+*
+
+# Aber die .gitignore selbst nicht ignorieren
+!.gitignore
