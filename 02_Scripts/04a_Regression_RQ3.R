@@ -21,6 +21,9 @@ pacman::p_load(
   knitr, kableExtra, sandwich, htmltools
 )
 
+# Load helper functions (to_fac, to_num)
+source("02_Scripts/Helpers.R")  # Load functions
+
 # -------------------------
 # Fonts -------------------
 # -------------------------
@@ -61,31 +64,6 @@ info_labels <- c(
   "Group-related Information Use"
 )
 
-# -------------------------
-# Function: Check model requirements
-# -------------------------
-check_requirements <- function(lm_model) {
-  data <- lm_model$model %>% mutate(across(where(is.factor), as.numeric))
-  
-  shapiro_result <- ifelse(shapiro.test(residuals(lm_model))$p.value > 0.05,
-                           "Normalverteilung nicht verletzt (gut)",
-                           "Normalverteilung verletzt (SCHLECHT)")
-  
-  vif_result <- ifelse(any(vif(lm_model) > 10),
-                       "Multikollinearität vorhanden (SCHLECHT)",
-                       "Keine Multikollinearität (gut)")
-  
-  bp_result <- ifelse(bptest(lm_model)$p.value > 0.05,
-                      "Keine Heteroskedastizität (gut)",
-                      "Heteroskedastizität vorhanden (SCHLECHT)")
-  
-  cat("\n--- Model Check ---\n")
-  print(lm_model$call)
-  cat("\nShapiro-Wilk:", shapiro_result,
-      "\nVIF:", vif_result,
-      "\nBreusch-Pagan:", bp_result, "\n")
-  cat("--------------------\n")
-}
 
 # -------------------------
 # 1. Scatterplots & Facet Grids
@@ -290,6 +268,34 @@ robust_beta_all <- bind_rows(robust_beta_list)
 robust_beta_all %>% 
   knitr::kable(format = "markdown") %>% 
   cat(file = "03_Output/RQ3/Robust_StdBetas_Block1.md", sep = "\n")
+
+
+# -------------------------
+# 7. Check model requirements und speichern
+# -------------------------
+
+# Liste für alle Modelle
+requirements_list <- list()
+
+for(dv in info_indices){
+  models <- list(model_list[[paste0(dv, "_0")]], model_list[[paste0(dv, "_1")]])
+  for(i in seq_along(models)){
+    res <- check_requirements_md(models[[i]])
+    res <- res %>% mutate(DV = dv, Block = paste0("Block ", i-1))
+    requirements_list[[paste0(dv, "_", i-1)]] <- res
+  }
+}
+
+# Zusammenführen
+requirements_all <- bind_rows(requirements_list)
+
+# In Markdown speichern
+requirements_all %>%
+  select(DV, Block, Shapiro_Wilk_p, Shapiro_Wilk_Result,
+         Max_VIF, VIF_Result, Breusch_Pagan_p, BP_Result, Model_Call) %>%
+  knitr::kable(format = "markdown") %>%
+  cat(file = "03_Output/RQ3/Model_Requirements.md", sep = "\n")
+
 
 # -------------------------
 # End of RQ3

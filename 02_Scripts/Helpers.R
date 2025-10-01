@@ -116,6 +116,36 @@ apply_rev_suffix <- function(items, rev_items) {
 # Example: ggplot(data, aes(x = to_fac(f4_1_1))) + geom_bar()
 
 
+check_requirements_md <- function(lm_model){
+  data <- lm_model$model %>% mutate(across(where(is.factor), as.numeric))
+  
+  shapiro_p <- shapiro.test(residuals(lm_model))$p.value
+  shapiro_result <- ifelse(shapiro_p > 0.05,
+                           "Normalverteilung nicht verletzt (gut)",
+                           "Normalverteilung verletzt (SCHLECHT)")
+  
+  vif_values <- vif(lm_model)
+  vif_result <- ifelse(any(vif_values > 10),
+                       "Multikollinearität vorhanden (SCHLECHT)",
+                       "Keine Multikollinearität (gut)")
+  
+  bp_p <- bptest(lm_model)$p.value
+  bp_result <- ifelse(bp_p > 0.05,
+                      "Keine Heteroskedastizität (gut)",
+                      "Heteroskedastizität vorhanden (SCHLECHT)")
+  
+  tibble(
+    DV = NA_character_,
+    Block = NA_character_,
+    Model_Call = deparse(lm_model$call),
+    Shapiro_Wilk_p = round(shapiro_p, 3),
+    Shapiro_Wilk_Result = shapiro_result,
+    Max_VIF = round(max(vif_values), 3),
+    VIF_Result = vif_result,
+    Breusch_Pagan_p = round(bp_p, 3),
+    BP_Result = bp_result
+  )
+}
 
 # ------------------------------
 # Usage:

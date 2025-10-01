@@ -21,6 +21,10 @@ pacman::p_load(
   knitr, kableExtra, sandwich, htmltools
 )
 
+# Load helper functions (to_fac, to_num)
+source("02_Scripts/Helpers.R")  # Load functions
+
+
 # -------------------------
 # Fonts -------------------
 # -------------------------
