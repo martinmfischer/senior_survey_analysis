@@ -149,7 +149,7 @@ make_codebook_md <- function(data, file = "CODEBOOK.md") {
 
 # Beispiel: Codebook für deinen Datensatz
 
-clean_data <- readRDS(file = file.path("01_Data", "social_media_2025_clean.rds"))
+clean_data <- readRDS(file = file.path("01_Data", "social_media_2025_clean_renamed.rds"))
 
 codebook <- extract_codebook(clean_data)
 
