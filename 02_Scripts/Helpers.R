@@ -118,17 +118,29 @@ apply_rev_suffix <- function(items, rev_items) {
 
 check_requirements_md <- function(lm_model){
   data <- lm_model$model %>% mutate(across(where(is.factor), as.numeric))
+  n_obs <- nrow(data)
   
-  shapiro_p <- shapiro.test(residuals(lm_model))$p.value
-  shapiro_result <- ifelse(shapiro_p > 0.05,
-                           "Normalverteilung nicht verletzt (gut)",
-                           "Normalverteilung verletzt (SCHLECHT)")
+  # Shapiro-Wilk
+  if(n_obs < 3){
+    shapiro_p <- NA
+    shapiro_result <- "Nicht genügend Beobachtungen für Shapiro-Wilk-Test"
+  } else if(n_obs > 500){
+    shapiro_p <- NA
+    shapiro_result <- "N>500: Shapiro-Wilk-Test wenig informativ, praktische Normalität prüfen (z.B. Q-Q-Plot)"
+  } else {
+    shapiro_p <- shapiro.test(residuals(lm_model))$p.value
+    shapiro_result <- ifelse(shapiro_p > 0.05,
+                             "Normalverteilung nicht verletzt (gut)",
+                             "Normalverteilung verletzt (SCHLECHT)")
+  }
   
+  # VIF
   vif_values <- vif(lm_model)
   vif_result <- ifelse(any(vif_values > 10),
                        "Multikollinearität vorhanden (SCHLECHT)",
                        "Keine Multikollinearität (gut)")
   
+  # Breusch-Pagan
   bp_p <- bptest(lm_model)$p.value
   bp_result <- ifelse(bp_p > 0.05,
                       "Keine Heteroskedastizität (gut)",
@@ -146,6 +158,8 @@ check_requirements_md <- function(lm_model){
     BP_Result = bp_result
   )
 }
+
+
 
 # ------------------------------
 # Usage:

@@ -238,5 +238,37 @@ robust_beta_all %>%
   cat(file = "03_Output/RQ4/Robust_StdBetas_Block3.md", sep = "\n")
 
 # -------------------------
+# 5. Check model requirements und speichern
+# -------------------------
+
+# Liste für alle Modelle
+requirements_list <- list()
+
+for(dv_name in names(rq4_dvs)){
+  dv <- rq4_dvs[dv_name]
+  models <- list(
+    model_list[[paste0(dv, "_1")]],
+    model_list[[paste0(dv, "_2")]],
+    model_list[[paste0(dv, "_3")]]
+  )
+  
+  for(i in seq_along(models)){
+    res <- check_requirements_md(models[[i]])
+    res <- res %>% mutate(DV = dv, Block = paste0("Block ", i))
+    requirements_list[[paste0(dv, "_", i)]] <- res
+  }
+}
+
+# Zusammenführen
+requirements_all <- bind_rows(requirements_list)
+
+# Markdown speichern
+requirements_all %>%
+  select(DV, Block, Shapiro_Wilk_p, Shapiro_Wilk_Result,
+         Max_VIF, VIF_Result, Breusch_Pagan_p, BP_Result, Model_Call) %>%
+  knitr::kable(format = "markdown") %>%
+  cat(file = "03_Output/RQ4/Model_Requirements.md", sep = "\n")
+
+# -------------------------
 # End of RQ4
 # -------------------------
