@@ -64,31 +64,6 @@ df <- df %>%
     TRUE ~ NA_real_                           # sonst NA
   ))
 
-# -------------------------
-# Function: Check model requirements
-# -------------------------
-check_requirements <- function(lm_model) {
-  data <- lm_model$model %>% mutate(across(where(is.factor), as.numeric))
-  
-  shapiro_result <- ifelse(shapiro.test(residuals(lm_model))$p.value > 0.05,
-                           "Normalverteilung nicht verletzt (gut)",
-                           "Normalverteilung verletzt (SCHLECHT)")
-  
-  vif_result <- ifelse(any(vif(lm_model) > 10),
-                       "Multikollinearität vorhanden (SCHLECHT)",
-                       "Keine Multikollinearität (gut)")
-  
-  bp_result <- ifelse(bptest(lm_model)$p.value > 0.05,
-                      "Keine Heteroskedastizität (gut)",
-                      "Heteroskedastizität vorhanden (SCHLECHT)")
-  
-  cat("\n--- Model Check ---\n")
-  print(lm_model$call)
-  cat("\nShapiro-Wilk:", shapiro_result,
-      "\nVIF:", vif_result,
-      "\nBreusch-Pagan:", bp_result, "\n")
-  cat("--------------------\n")
-}
 
 # -------------------------
 # 1. Regression Models RQ4

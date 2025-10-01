@@ -36,6 +36,19 @@ loadfonts(device = "win")
 df <- readRDS("01_Data/social_media_2025_scored.rds")
 
 # -------------------------
+# Create platform-specific usage variable
+# -------------------------
+df <- df %>%
+  mutate(platform_usage = case_when(
+    platform_helper == 1 ~ facebook_usage,   # Facebook
+    platform_helper == 2 ~ instagram_usage,  # Instagram
+    platform_helper == 3 ~ x_usage,          # X (ehemals Twitter)
+    platform_helper == 4 ~ tiktok_usage,     # TikTok
+    platform_helper == 5 ~ youtube_usage,    # YouTube
+    TRUE ~ NA_real_                           # sonst NA
+  ))
+
+# -------------------------
 # Create Directories -------
 # -------------------------
 dir.create("04_Figures", showWarnings = FALSE)
@@ -134,7 +147,7 @@ model_list <- list()
 
 for(dv in info_indices){
   # Block 0
-  m0 <- lm(as.formula(paste(dv, "~ age_years + gender_binary + education_cat + platform_helper")), data = df)
+  m0 <- lm(as.formula(paste(dv, "~ age_years + gender_binary + education_cat + platform_helper + platform_usage")), data = df)
   # Block 1
   m1 <- update(m0, . ~ . + idx_implicit + idx_explicit + idx_sociality + idx_incidentalness)
   
