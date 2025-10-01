@@ -1,5 +1,5 @@
 # ============================================================
-# Create Codebook from labelled data
+# Create Codebook from labelled data (German only)
 # ============================================================
 
 rm(list = ls())

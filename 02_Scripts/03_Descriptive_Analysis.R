@@ -20,10 +20,10 @@ gc()
 
 pacman::p_load(tidyverse, tidycomm, purrr)
 
-# Load helper functions (to_fac, to_num)
+# Load helper functions (to_fac, to_num, choose_items_by_omega)
 source("02_Scripts/Helpers.R")  # Load functions
 
-# Load cleaned data --------------------------------------------------------
+# Load clean data --------------------------------------------------------
 clean_data <- readRDS("01_Data/social_media_2025_clean_renamed.rds")
 
 # ------------------------------
@@ -45,9 +45,6 @@ data_rev <- clean_data %>% reverse_scale(implicit_2,
                              lower_end = 5,
                              upper_end = 1)
 
-
-
-
 # ------------------------------
 # Compute reliability + mean indices
 # ------------------------------
@@ -61,7 +58,8 @@ data_idx <- data_rev %>%
             explicit_1, explicit_2, explicit_3, explicit_4_rev,
             cast.numeric = TRUE) %>%
   add_index(idx_incidentalness,
-            incidentalness_1, incidentalness_2_rev, incidentalness_3, incidentalness_4, incidentalness_5_rev,
+            incidentalness_1, incidentalness_2_rev, incidentalness_3, incidentalness_4, 
+            incidentalness_5_rev,
             cast.numeric = TRUE) %>%
   add_index(idx_sociality,
             sociality_1, sociality_2_rev, sociality_3, sociality_4, sociality_5_rev,
@@ -75,38 +73,35 @@ data_idx <- data_rev %>%
             engagement_1, engagement_2, engagement_3, engagement_4,
             cast.numeric = TRUE) %>%
   add_index(idx_curation, 
-            curation_1, curation_2, curation_3, curation_4, curation_5, curation_6, curation_7,
+            curation_1, curation_2, curation_3, curation_4, curation_5, curation_6, 
+            curation_7,
             cast.numeric = TRUE) %>%
   # Information use (2-item indices)
-  add_index(idx_info_undirected, undirected_news,       undirected_life,           cast.numeric = TRUE) %>%
-  add_index(idx_info_topic,      topic_interests,       topic_hobbies,             cast.numeric = TRUE) %>%
-  add_index(idx_info_problem,    problem_specific_need, problem_solving,           cast.numeric = TRUE) %>%
-  add_index(idx_info_group,      group_close,           group_extended,            cast.numeric = TRUE)
+  add_index(idx_info_undirected, undirected_news, undirected_life,           
+            cast.numeric = TRUE) %>%
+  add_index(idx_info_topic,      topic_interests, topic_hobbies,             
+            cast.numeric = TRUE) %>%
+  add_index(idx_info_problem,    problem_specific_need, problem_solving,           
+            cast.numeric = TRUE) %>%
+  add_index(idx_info_group,      group_close, group_extended,            
+            cast.numeric = TRUE)
 
-data_idx %>% get_reliability(type = "hierarchical")
+data_idx %>% get_reliability(idx_implicit, idx_explicit, idx_incidentalness, 
+                             idx_sociality, idx_snacking, idx_engagement, idx_curation,
+                             type = "hierarchical")
 data_idx %>% get_reliability(idx_info_undirected, idx_info_topic,
                              idx_info_problem, idx_info_group, type = "alpha")
 
 
-## Two indices are critical, below omega of .7
+## Two indices (explicit personalization + snacking) are critical, below omega of .7
 # Check if dropping items improves omega for each scale
 
 
-
 scales <- list(
-  implicit  = c("implicit_1", "implicit_2_rev", "implicit_3", "implicit_4_rev"),
-  explicit  = c("explicit_1", "explicit_2", "explicit_3", "explicit_4_rev"),
-  incidentalness = c("incidentalness_1", "incidentalness_2_rev", "incidentalness_3", "incidentalness_4", "incidentalness_5_rev"),
-  sociality = c("sociality_1", "sociality_2_rev", "sociality_3", "sociality_4", "sociality_5_rev"),
-  snacking  = c("snacking_1", "snacking_2_rev", "snacking_3", "snacking_4_rev", "snacking_5", "snacking_6_rev", "snacking_7_rev", "snacking_8"),
-  engagement = c("engagement_1", "engagement_2", "engagement_3", "engagement_4"),
-  curation   = c("curation_1", "curation_2", "curation_3", "curation_4", "curation_5", "curation_6", "curation_7"),
-  info_undirected = c("undirected_news", "undirected_life"),
-  info_topic      = c("topic_interests", "topic_hobbies"),
-  info_problem    = c("problem_specific_need", "problem_solving"),
-  info_group      = c("group_close", "group_extended")
+  explicit       = c("explicit_1", "explicit_2", "explicit_3", "explicit_4_rev"),
+  snacking       = c("snacking_1", "snacking_2_rev", "snacking_3", "snacking_4_rev", 
+                     "snacking_5", "snacking_6_rev", "snacking_7_rev", "snacking_8")
 )
-
 
 
 results <- imap_dfr(scales, ~ {
@@ -120,7 +115,9 @@ results <- imap_dfr(scales, ~ {
 })
 
 results
-
+  
+# No reliability improvement (slightly differing omegas due to different defaults 
+# in get_reliability and choose_items_by_omega), leave all scales complete
 
 # ------------------------------
 # Recode gender + education
@@ -204,3 +201,32 @@ data_idx %>%
 
 data_idx %>% 
   tab_frequencies(youtube_usage)
+
+# --------------------------------------------------------------
+# RQ1: Descriptive Analysis of Perceptions
+# --------------------------------------------------------------
+
+data_idx %>% 
+ describe(idx_implicit)
+
+data_idx %>% 
+  describe(idx_explicit)
+
+data_idx %>% 
+  describe(idx_incidentalness)
+
+data_idx %>% 
+  describe(idx_sociality)
+
+# --------------------------------------------------------------
+# RQ2: Descriptive Analysis of Practices
+# --------------------------------------------------------------
+
+data_idx %>% 
+  describe(idx_engagement)
+
+data_idx %>% 
+  describe(idx_curation)
+
+data_idx %>% 
+  describe(idx_snacking)
