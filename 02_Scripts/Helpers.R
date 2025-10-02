@@ -4,7 +4,7 @@
 # Author: Martin Fischer
 # Date:   2025-10-02
 # Purpose:
-#   - Various Helper Functions
+#   - Various helper functions
 # ============================================================
 
 # --- Setup -----------------------------------------------------------------
