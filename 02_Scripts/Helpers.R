@@ -2,22 +2,19 @@
 # File:   helpers.R
 # Project:  Social Media as an Information Source for Older Adults
 # Author: Martin Fischer
-# Date:   2025-09-12
+# Date:   2025-10-02
 # Purpose:
 #   - Various Helper Functions
 # ============================================================
 
-# ------------------------------
-# Load dependencies
-# ------------------------------
+# --- Setup -----------------------------------------------------------------
+
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(haven, dplyr, ggplot2)
 
-# ------------------------------
-# Functions
-# ------------------------------
+# --- Coverters -------------------------------------------------------------
 
-# Convert labelled variable to numeric (for models)
+# to_num: convert haven::labelled / factor to numeric (for models
 to_num <- function(x) {
   if (haven::is.labelled(x)) {
     as.numeric(x)
@@ -26,7 +23,7 @@ to_num <- function(x) {
   }
 }
 
-# Convert labelled variable to ordered factor (for plots)
+# to_fac: convert haven::labelled to ordered factor (for labelled plots)
 to_fac <- function(x) {
   if (haven::is.labelled(x)) {
     haven::as_factor(x, levels = "labels", ordered = TRUE)
@@ -35,27 +32,16 @@ to_fac <- function(x) {
   }
 }
 
-# Reverse code 5-point Likert scales (adds *_rev columns for the given items)
-# 1 -> 5, 2 -> 4, 3 -> 3, 4 -> 2, 5 -> 1
-reverse_likert <- function(x) {
-  xn <- to_num(x)
-  ifelse(is.na(xn), NA, 6 - xn)
-}
+## Usage
+# clean_data %>% ggplot(aes(x = to_fac(explicit_1))) + geom_bar()
+# Optional ggplot helper: use labelled variable for x-axis
+# Example: ggplot(data, aes(x = to_fac(f4_1_1))) + geom_bar()
+# lm(to_num(explicit_1) ~ age + gender, data = clean_data)
 
-# Index building: row mean index with missing tolerance
-# min_prop = minimum proportion answered, default = 0.6
-row_mean <- function(df, items, min_prop = 0.6) {
-  mat <- df |> dplyr::select(all_of(items)) |> as.data.frame()
-  mat[] <- lapply(mat, to_num)
-  n_items <- ncol(mat)
-  ok <- rowSums(!is.na(mat)) >= ceiling(min_prop * n_items)
-  idx <- rowMeans(mat, na.rm = TRUE)
-  idx[!ok] <- NA_real_
-  idx
-}
+# --- Reliability helpers ---------------------------------------------------
 
-# Extract omega_h (hierarchical omega)
-# Drop other returns from psych::omega()
+# omega_h: # omega_h: compute hierarchical omega for a set of items (>= 3 items),
+# drop other returns from psych::omega()
 omega_h <- function(df, items) {
   mat <- df |> dplyr::select(all_of(items)) |> mutate(across(everything(), to_num)) |> as.matrix()
   if (ncol(mat) < 3) return(NA_real_)  # ωh nur sinnvoll ab 3 Items
@@ -66,14 +52,18 @@ omega_h <- function(df, items) {
   as.numeric(out$omega_h)
 }
 
-# Drop-one rule: if ωh < thr (o.7), test scale without each item 
+## Usage example
+# omega_h:
+# omega_h(data, items)
+
+# choose_items_by_omega: if omega_h < thr, try drop-one; otherwise keep all
 choose_items_by_omega <- function(df, items, thr = 0.7) {
   if (length(items) <= 2) {
     return(list(
       items_used = items,
       omega_h = NA_real_,
       dropped = NA_character_,
-      note = "Omega-h nicht berechenbar bei <= 2 Items"
+      note = "Omega-h not feasible for <= 2 items"
     ))
   }
   
@@ -98,7 +88,12 @@ choose_items_by_omega <- function(df, items, thr = 0.7) {
   }
 }
 
-# Spearman-Brown reliability for 2-item scales
+##Usage example
+# choice <- choose_items_by_omega(data_rev, items_used, thr = 0.7)
+# choice$items_used   # final items after optional drop
+# choice$omega_h      # resulting omega_h
+
+# spearman_brown_2items: reliability for a 2-item scale
 spearman_brown_2items <- function(x, y) {
   x <- to_num(x); y <- to_num(y)
   r <- suppressWarnings(stats::cor(x, y, use = "pairwise.complete.obs"))
@@ -106,45 +101,45 @@ spearman_brown_2items <- function(x, y) {
   (2 * r) / (1 + r)
 }
 
-# Item list adjustment (reverse suffix)
-# Add *_rev to item names if they are in rev_items
-apply_rev_suffix <- function(items, rev_items) {
-  ifelse(items %in% rev_items, paste0(items, "_rev"), items)
-}
+## Usage example
+# sb <- spearman_brown_2items(data_rev[[items[1]]], data_rev[[items[2]]])
+# if (!is.na(sb) && sb >= 0.7) {
+#   idx_2item <- row_mean(data_rev, items, min_prop = 1.0)  # require both items
+# }
 
-# Optional ggplot helper: use labelled variable for x-axis
-# Example: ggplot(data, aes(x = to_fac(f4_1_1))) + geom_bar()
+# --- Model requirements report ---------------------------------------------
 
-
+# check_requirements_md: quick diagnostics for an lm() model
+# Returns a tibble for Markdown reporting
 check_requirements_md <- function(lm_model){
   data <- lm_model$model %>% mutate(across(where(is.factor), as.numeric))
   n_obs <- nrow(data)
   
-  # Shapiro-Wilk
+  # Shapiro-Wilk on residuals (only informative for small/moderate n)
   if(n_obs < 3){
     shapiro_p <- NA
-    shapiro_result <- "Nicht genügend Beobachtungen für Shapiro-Wilk-Test"
+    shapiro_result <- "Too few observations for Shapiro–Wilk test"
   } else if(n_obs > 500){
     shapiro_p <- NA
-    shapiro_result <- "N>500: Shapiro-Wilk-Test wenig informativ, praktische Normalität prüfen (z.B. Q-Q-Plot)"
+    shapiro_result <- "N>500: Shapiro–Wilk is not informative; inspect Q–Q plot instead"
   } else {
     shapiro_p <- shapiro.test(residuals(lm_model))$p.value
     shapiro_result <- ifelse(shapiro_p > 0.05,
-                             "Normalverteilung nicht verletzt (gut)",
-                             "Normalverteilung verletzt (SCHLECHT)")
+                             "Residual normality not rejected (GOOD)",
+                             "Residual normality rejected (BAD)")
   }
   
-  # VIF
+  # VIF (Variance Inflation Factor)
   vif_values <- vif(lm_model)
   vif_result <- ifelse(any(vif_values > 10),
-                       "Multikollinearität vorhanden (SCHLECHT)",
-                       "Keine Multikollinearität (gut)")
+                       "Multicollinearity detected (max VIF > 10) (BAD)",
+                       "No severe multicollinearity (max VIF <= 10) (GOOD)")
   
   # Breusch-Pagan
   bp_p <- bptest(lm_model)$p.value
   bp_result <- ifelse(bp_p > 0.05,
-                      "Keine Heteroskedastizität (gut)",
-                      "Heteroskedastizität vorhanden (SCHLECHT)")
+                      "Homoscedasticity not detected (GOOD)",
+                      "Heteroscedasticity detected (BAD)")
   
   tibble(
     DV = NA_character_,
@@ -159,37 +154,6 @@ check_requirements_md <- function(lm_model){
   )
 }
 
+## Usage example
 
-
-# ------------------------------
-# Usage:
-# ------------------------------
-# source("R/helpers.R")  # Load functions
-
-# clean_data %>% ggplot(aes(x = to_fac(explicit_1))) + geom_bar()
-
-# lm(to_num(explicit_1) ~ age + gender, data = clean_data)
-
-# reverse_likert: 
-# data_rev <- clean_data %>%
-# dplyr::mutate(across(all_of(rev_items), ~ reverse_likert(.x), .names = "{.col}_rev"))
-
-# apply_rev_suffix:
-# items_used <- apply_rev_suffix(items, rev_items)
-
-# omega_h:
-# omega_h(data_rev, items_used)
-
-# choose_items_by_omega:
-# choice <- choose_items_by_omega(data_rev, items_used, thr = 0.7)
-# choice$items_used   # final items after optional drop
-# choice$omega_h      # resulting omega_h
-
-# row_mean:
-# idx <- row_mean(data_rev, choice$items_used, min_prop = 0.6)
-
-# spearman_brown_2items:
-# sb <- spearman_brown_2items(data_rev[[items[1]]], data_rev[[items[2]]])
-# if (!is.na(sb) && sb >= 0.7) {
-#   idx_2item <- row_mean(data_rev, items, min_prop = 1.0)  # require both items
-# }
+# --- End of script ---------------------------------------------------------

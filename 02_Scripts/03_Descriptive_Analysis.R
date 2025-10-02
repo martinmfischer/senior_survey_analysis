@@ -16,8 +16,8 @@ gc()
 
 pacman::p_load(tidyverse, tidycomm, psych, dplyr)
 
-source("02_Scripts/Helpers.R")  # to_fac, to_num, choose_items_by_omega, 
-# spearman_brown_2items
+source("02_Scripts/Helpers.R")  # to_fac, to_num, omega_h, 
+                                # choose_items_by_omega, spearman_brown_2items
 
 # Load clean data -----------------------------------------------------------
 

@@ -1,91 +1,76 @@
 # ============================================================
 # File:   04a_Regression_RQ4.R
-# Project: LMU Social Media 2025
+# Project: Social Media as an Information Source for Older Adults
 # Author: Martin Fischer
-# Date:   2025-10-01
+# Date:   2025-10-02
 # Purpose:
-#   - Hierarchical regression analyses for RQ4
-#   - All outputs use standardized Beta coefficients
+#   - RQ4 regressions (info use -> practices), standardized beta
 # ============================================================
 
-# -------------------------
-# Packages ----------------
-# -------------------------
+# --- Setup -----------------------------------------------------------------
+
 rm(list = ls(all = TRUE))
 if(!require(pacman)) install.packages("pacman")
 pacman::p_unload("all")
 
 pacman::p_load(
-  tidyverse, report, texreg, dplyr, ggcorrplot, viridis, extrafont, 
-  lm.beta, car, ggplot2, ggfortify, lmtest, GGally, ggeffects,
-  knitr, kableExtra, sandwich, htmltools
+  tidyverse, texreg, lm.beta, sandwich, lmtest, kableExtra,
+  ggcorrplot, car, knitr, extrafont
 )
 
-# Load helper functions (to_fac, to_num)
-source("02_Scripts/Helpers.R")  # Load functions
+source("02_Scripts/Helpers.R")  # to_fac, to_num
 
+# --- Fonts (only for Windows) ----------------------------------------------
 
-# -------------------------
-# Fonts -------------------
-# -------------------------
-font_import(paths = "C:/WINDOWS/Fonts", pattern = "times.ttf", prompt = FALSE)
-loadfonts(device = "win")
+# font_import(paths = "C:/WINDOWS/Fonts", pattern = "times.ttf", prompt = FALSE)
+# loadfonts(device = "win")
 
-# -------------------------
-# Load Data ----------------
-# -------------------------
+# --- Data ------------------------------------------------------------------
+
 df <- readRDS("01_Data/social_media_2025_scored.rds")
 
-# -------------------------
-# Create Directories -------
-# -------------------------
+# --- Platform controls -----------------------------------------------------
+
+df <- df %>%
+  mutate(platform_usage = case_when(
+    platform_helper == 1 ~ facebook_usage,   # Facebook
+    platform_helper == 2 ~ instagram_usage,  # Instagram
+    TRUE ~ NA_real_                          # X/YouTube/TikTok --> NA
+  )) %>% 
+  mutate(platform_helper = factor(platform_helper,
+                                  levels = c(2, 1),
+                                  labels = c("Instagram", "Facebook")))
+
+
+# --- Directories -----------------------------------------------------------
+
 dir.create("04_Figures/RQ4", showWarnings = FALSE)
 dir.create("03_Output/RQ4", showWarnings = FALSE)
 
-# -------------------------
-# Define DVs and Labels ----
-# -------------------------
+# --- DVs and Labels --------------------------------------------------------
+
 rq4_dvs <- c(
   "Navigation Practices" = "idx_snacking",
   "Engagement Practices" = "idx_engagement",
   "Curation Practices" = "idx_curation"
 )
 
-# -------------------------
-# Create platform-specific usage variable
-# -------------------------
-df <- df %>%
-  mutate(platform_usage = case_when(
-    platform_helper == 1 ~ facebook_usage,   # Facebook
-    platform_helper == 2 ~ instagram_usage,  # Instagram
-    platform_helper == 3 ~ x_usage,          # X (ehemals Twitter)
-    platform_helper == 4 ~ tiktok_usage,     # TikTok
-    platform_helper == 5 ~ youtube_usage,    # YouTube
-    TRUE ~ NA_real_                           # sonst NA
-  ))
-df <- df %>%
-  mutate(platform_helper = factor(platform_helper,
-                                  levels = 1:5,
-                                  labels = c("Facebook", "Instagram", "X", "TikTok", "YouTube")))
+# --- 1. Regression Models --------------------------------------------------
 
-
-# -------------------------
-# 1. Regression Models RQ4
-# -------------------------
 model_list <- list()
 
 for(dv_name in names(rq4_dvs)){
   dv <- rq4_dvs[dv_name]
   
-  # Block 1: Demographics + Platform + Usage
+  # Block 0: controls (SD, questionnaire platform, usage frequency)
   f1 <- as.formula(paste(dv, "~ age_years + gender_binary + education_cat + platform_helper + platform_usage"))
   m1 <- lm(f1, data = df)
   
-  # Block 2: Add perceived usefulness
+  # Block 2: + usefulness perceptions
   f2 <- update(f1, . ~ . + idx_implicit + idx_explicit + idx_sociality + idx_incidentalness)
   m2 <- lm(f2, data = df)
   
-  # Block 3: Add information use frequencies
+  # Block 3: + information use frequencies
   f3 <- update(f2, . ~ . + idx_info_undirected + idx_info_topic + idx_info_group + idx_info_problem)
   m3 <- lm(f3, data = df)
   
@@ -95,12 +80,11 @@ for(dv_name in names(rq4_dvs)){
   model_list[[paste0(dv, "_3")]] <- m3
 }
 
-# Function: standardize models
+# Standardize models
 get_std_models <- function(models) lapply(models, lm.beta)
 
-# -------------------------
-# 2. Markdown output per DV
-# -------------------------
+# --- 2. Markdown output per DV ---------------------------------------------
+
 for(dv_name in names(rq4_dvs)){
   dv <- rq4_dvs[dv_name]
   models_to_report <- list(model_list[[paste0(dv, "_1")]],
@@ -145,9 +129,8 @@ for(dv_name in names(rq4_dvs)){
   coef_df %>% kable(format = "markdown") %>% cat(file = md_file, append = TRUE, sep = "\n")
 }
 
-# -------------------------
-# 3. HTML combined tables
-# -------------------------
+# --- 3. HTML combined tables -----------------------------------------------
+
 html_file <- "03_Output/RQ4/All_RQ4_Models.html"
 cat('<html>
 <head>
@@ -187,9 +170,7 @@ for(dv_name in names(rq4_dvs)){
 
 cat('</div>\n</body>\n</html>', file = html_file, append = TRUE)
 
-# -------------------------
-# 4. Robust SE for Block 3 (Standardized Betas)
-# -------------------------
+# --- 4. Robust SE for Block 3 (Standardized Betas) -------------------------
 robust_beta_list <- list()
 
 for(dv_name in names(rq4_dvs)){
@@ -216,11 +197,9 @@ robust_beta_all %>%
   knitr::kable(format = "markdown") %>% 
   cat(file = "03_Output/RQ4/Robust_StdBetas_Block3.md", sep = "\n")
 
-# -------------------------
-# 5. Check model requirements und speichern
-# -------------------------
+# --- 5. Check model requirements -------------------------------------------
 
-# Liste für alle Modelle
+# List for all models
 requirements_list <- list()
 
 for(dv_name in names(rq4_dvs)){
@@ -238,16 +217,13 @@ for(dv_name in names(rq4_dvs)){
   }
 }
 
-# Zusammenführen
+# Bind and save requirement overview
 requirements_all <- bind_rows(requirements_list)
 
-# Markdown speichern
 requirements_all %>%
   select(DV, Block, Shapiro_Wilk_p, Shapiro_Wilk_Result,
          Max_VIF, VIF_Result, Breusch_Pagan_p, BP_Result, Model_Call) %>%
   knitr::kable(format = "markdown") %>%
   cat(file = "03_Output/RQ4/Model_Requirements.md", sep = "\n")
 
-# -------------------------
-# End of RQ4
-# -------------------------
+# --- End of RQ4 -------------------------------------------------------------

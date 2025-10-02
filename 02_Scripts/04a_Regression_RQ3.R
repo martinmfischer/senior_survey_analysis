@@ -15,7 +15,7 @@ pacman::p_unload("all")
 
 pacman::p_load(
   tidyverse, texreg, lm.beta, sandwich, lmtest, kableExtra,
-  ggcorrplot, car, knitr)
+  ggcorrplot, car, knitr, extrafont)
 
 source("02_Scripts/Helpers.R")  # to_fac, to_num
 
