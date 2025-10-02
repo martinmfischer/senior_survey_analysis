@@ -1,6 +1,6 @@
 # ============================================================
 # File:   helpers.R
-# Project: LMU Social Media 2025
+# Project:  Social Media as an Information Source for Older Adults
 # Author: Martin Fischer
 # Date:   2025-09-12
 # Purpose:

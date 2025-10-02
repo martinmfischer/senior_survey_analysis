@@ -1,8 +1,8 @@
 # ============================================================
-# Project: LMU Social Media 2025
-# File:   01_read_clean_data.R
+# File:   01_Read_Clean_data.R
+# Project:  Social Media as an Information Source for Older Adults
 # Author: Martin Fischer
-# Date:   2025-09-12
+# Date:   2025-10-02
 # Purpose:
 #   - Load raw data file (.sav) from 0_Data/
 #   - Perform basic cleaning (column names, NAs, empty rows/cols)
@@ -10,14 +10,10 @@
 #
 # ============================================================
 
-
 rm(list = ls())
 gc()
 
-
-# ------------------------------
-# Load required packages
-# ------------------------------
+# --- Setup -----------------------------------------------------------------
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(
@@ -27,19 +23,16 @@ pacman::p_load(
   stringr     # string handling
 )
 
-# ------------------------------
-# File paths
-# ------------------------------
+# --- File paths ------------------------------------------------------------
+
 raw_file <- file.path("01_Data", "25-041246_LMU_Social Media_2025.sav")
 
-# ------------------------------
-# Load data
-# ------------------------------
+# --- Read data -------------------------------------------------------------
+
 raw_data <- haven::read_sav(raw_file)
 
-# ------------------------------
-# Basic cleaning
-# ------------------------------
+# --- Basic cleaning --------------------------------------------------------
+
 clean_data <- raw_data %>%
   # clean variable names: lower_snake_case
   janitor::clean_names() %>%
@@ -55,11 +48,9 @@ clean_data <- clean_data %>%
 clean_data <- clean_data %>%
   mutate(across(where(is.numeric), ~ na_if(.x, 99)))
 
-# ------------------------------
-# Rename variables
-# ------------------------------
+# --- Rename variables ------------------------------------------------------
+
 data_renamed <- clean_data %>%
-  # Rename variables for clarity and consistency
   rename(
     # IDs & Screener
     participant_id              = i_tid,
@@ -144,16 +135,14 @@ data_renamed <- clean_data %>%
     household_income            = p_haushaltsnettoeinkommen
   )
 
-# Check
-glimpse(data_renamed)
+# Optional check
+# glimpse(data_renamed)
 
+# --- Save cleaned data -----------------------------------------------------
 
-# ------------------------------
-# Save cleaned data
-# ------------------------------
 saveRDS(clean_data, file = file.path("01_Data", "social_media_2025_clean.rds"))
 saveRDS(data_renamed, file = file.path("01_Data", "social_media_2025_clean_renamed.rds"))
 
-#label_table <- lapply(clean_data, function(x) attr(x, "labels"))
+# label_table <- lapply(clean_data, function(x) attr(x, "labels"))
 
 # End of script
