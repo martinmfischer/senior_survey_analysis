@@ -1,34 +1,30 @@
 # ============================================================
 # File:   03_Descriptive_Analysis.R
-# Project: LMU Social Media 2025
+# Project: Social Media as an Information Source for Older Adults
 # Author: Martin Fischer
-# Date:   2025-09-12
+# Date:   2025-10-02
 # Purpose:
-#   - Descriptive analyses of the social media survey dataset
-#   - Frequencies, tables, plots for labelled variables
+#   - Build indices; reliability checks; recode variables
+#   - Descriptive analyses (sample characteristics, RQ1, RQ2)
 # ============================================================
 
-# ------------------------------
-# Load dependencies
-# ------------------------------
-
-
 # Setup ---------------------------------------------------------------------
+
 if (!require("pacman")) install.packages("pacman")
 rm(list = ls())
 gc()
 
-pacman::p_load(tidyverse, tidycomm, purrr)
+pacman::p_load(tidyverse, tidycomm, psych, dplyr)
 
-# Load helper functions (to_fac, to_num, choose_items_by_omega)
-source("02_Scripts/Helpers.R")  # Load functions
+source("02_Scripts/Helpers.R")  # to_fac, to_num, choose_items_by_omega, 
+# spearman_brown_2items
 
-# Load clean data --------------------------------------------------------
+# Load clean data -----------------------------------------------------------
+
 clean_data <- readRDS("01_Data/social_media_2025_clean_renamed.rds")
 
-# ------------------------------
-# Recode reverse-coded items
-# ------------------------------
+# Reverse-code items (Likert 1–5) -------------------------------------------
+# Note: reverse_scale creates *_rev columns; here 1<->5 mapping
 
 data_rev <- clean_data %>% reverse_scale(implicit_2,
                              implicit_4,
@@ -45,9 +41,7 @@ data_rev <- clean_data %>% reverse_scale(implicit_2,
                              lower_end = 5,
                              upper_end = 1)
 
-# ------------------------------
-# Compute reliability + mean indices
-# ------------------------------
+# --- Indices (tidycomm) ----------------------------------------------------
 
 data_idx <- data_rev %>%
   # Perceived usefulness
@@ -86,44 +80,57 @@ data_idx <- data_rev %>%
   add_index(idx_info_group,      group_close, group_extended,            
             cast.numeric = TRUE)
 
-data_idx %>% get_reliability(idx_implicit, idx_explicit, idx_incidentalness, 
-                             idx_sociality, idx_snacking, idx_engagement, idx_curation,
-                             type = "hierarchical")
-data_idx %>% get_reliability(idx_info_undirected, idx_info_topic,
-                             idx_info_problem, idx_info_group, type = "alpha")
+# --- Reliability (psych) ---------------------------------------------------
 
-
-## Two indices (explicit personalization + snacking) are critical, below omega of .7
-# Check if dropping items improves omega for each scale
-
-
-scales <- list(
-  explicit       = c("explicit_1", "explicit_2", "explicit_3", "explicit_4_rev"),
-  snacking       = c("snacking_1", "snacking_2_rev", "snacking_3", "snacking_4_rev", 
-                     "snacking_5", "snacking_6_rev", "snacking_7_rev", "snacking_8")
+# ωh (drop-one only if ωh < .70) for perceptions and practices
+pp_scales <- list(
+  implicit       = c("implicit_1","implicit_2_rev","implicit_3","implicit_4_rev"),
+  explicit       = c("explicit_1","explicit_2","explicit_3","explicit_4_rev"),
+  incidentalness = c("incidentalness_1","incidentalness_2_rev","incidentalness_3",
+                     "incidentalness_4","incidentalness_5_rev"),
+  sociality      = c("sociality_1","sociality_2_rev","sociality_3","sociality_4",
+                     "sociality_5_rev"),
+  snacking       = c("snacking_1","snacking_2_rev","snacking_3","snacking_4_rev",
+                     "snacking_5","snacking_6_rev","snacking_7_rev","snacking_8"),
+  engagement     = c("engagement_1","engagement_2","engagement_3","engagement_4"),
+  curation       = c("curation_1","curation_2","curation_3","curation_4","curation_5",
+                     "curation_6","curation_7")
 )
 
-
-results <- imap_dfr(scales, ~ {
+omega_results <- imap_dfr(pp_scales, ~ {
   res <- choose_items_by_omega(data_rev, .x, thr = 0.7)
   tibble(
-    scale = .y,
-    omega_h = res$omega_h,
-    items_used = paste(res$items_used, collapse = ", "),
-    dropped = ifelse(is.na(res$dropped), "-", res$dropped)
+    scale       = .y,
+    omega_h     = res$omega_h,
+    items_used  = paste(res$items_used, collapse = ", "),
+    dropped     = ifelse(is.na(res$dropped), "-", res$dropped)
   )
 })
 
-results
-  
-# No reliability improvement (slightly differing omegas due to different defaults 
-# in get_reliability and choose_items_by_omega), leave all scales complete
+omega_results
+# Note: 'explicit' remains < .70 even after drop-one; others ≥ .70
 
-# ------------------------------
-# Recode gender + education
-# ------------------------------
+# Spearman-Brown for information uses
+info_scales <- list(
+  info_undirected = c("undirected_news","undirected_life"),
+  info_topic      = c("topic_interests","topic_hobbies"),
+  info_problem    = c("problem_specific_need","problem_solving"),
+  info_group      = c("group_close","group_extended")
+)
 
-# Recode education
+sb_results <- purrr::imap_dfr(info_scales, ~ {
+  sb <- spearman_brown_2items(data_rev[[.x[1]]], data_rev[[.x[2]]])
+  tibble::tibble(
+    scale          = .y,
+    items          = paste(.x, collapse = ", "),
+    spearman_brown = round(sb, 3),
+    pass           = !is.na(sb) && sb >= 0.7
+  )
+})
+
+sb_results
+
+# --- Recode gender & education ---------------------------------------------
 
 data_idx <- data_idx %>%
   mutate(
@@ -142,8 +149,6 @@ data_idx <- data_idx %>%
     education_cat = factor(education_cat, levels = c("low","medium","high"))
   )
 
-# Recode gender
-
 data_idx <- data_idx %>%
   mutate(
     gender_binary = recode_factor(gender,
@@ -153,16 +158,12 @@ data_idx <- data_idx %>%
     gender_binary = factor(gender_binary, levels = c("non-female","female"))
   )
 
+# Save scored data for regression -------------------------------------------
 
-# ------------------------------
-# Save scored data for regression
-# ------------------------------
 saveRDS(data_idx, file = file.path("01_Data", "social_media_2025_scored.rds"))
 
 
-# --------------------------------------------------------------
-# Sociodemographic composition and characteristics of the sample
-# --------------------------------------------------------------
+# --- Sociodemographic composition and sample characteristics----------------
 
 # Age
 data_idx %>% 
@@ -183,10 +184,7 @@ data_idx  %>%
 data_idx %>% 
   tab_frequencies(household_income)
 
-# Social Media Use
-data_idx %>% 
-  tab_frequencies(platform_helper)
-
+# Social media use: usage frequency per platform
 data_idx %>% 
   tab_frequencies(facebook_usage)
 
@@ -202,9 +200,40 @@ data_idx %>%
 data_idx %>% 
   tab_frequencies(youtube_usage)
 
-# --------------------------------------------------------------
-# RQ1: Descriptive Analysis of Perceptions
-# --------------------------------------------------------------
+# Social media use: questionnaire platform
+data_idx %>% 
+  tab_frequencies(platform_helper)
+
+# Social media use: platforms used
+
+platform_vars <- c("facebook_usage","instagram_usage","x_usage","tiktok_usage",
+                   "youtube_usage")
+
+data_idx <- data_idx %>%
+  mutate(across(all_of(platform_vars),
+                ~ if_else(between(to_num(.), 1, 7), 1L, 0L, missing = 0L),
+                .names = "{.col}_use"))
+
+platforms_used <- data_idx %>%
+  mutate(id = row_number()) %>%
+  select(id, ends_with("_use")) %>%
+  pivot_longer(-id, names_to = "platform", values_to = "use") %>%
+  filter(use == 1L) %>%
+  mutate(platform = sub("_usage_use$", "", platform)) %>%
+  group_by(id) %>%
+  summarise(
+    n_platforms_used = n(),
+    combo = paste(sort(platform), collapse = " + "),
+    .groups = "drop"
+  )
+
+top_combos <- platforms_used %>%
+  count(combo, sort = TRUE) %>%
+  mutate(prop = round(n / sum(n), 3))
+
+top_combos
+
+# --- RQ1: Descriptive Analysis of Perceptions-------------------------------
 
 data_idx %>% 
  describe(idx_implicit)
@@ -218,9 +247,7 @@ data_idx %>%
 data_idx %>% 
   describe(idx_sociality)
 
-# --------------------------------------------------------------
-# RQ2: Descriptive Analysis of Practices
-# --------------------------------------------------------------
+# --- RQ2: Descriptive Analysis of Practices --------------------------------
 
 data_idx %>% 
   describe(idx_engagement)
