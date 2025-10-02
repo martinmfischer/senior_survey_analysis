@@ -1,61 +1,46 @@
 # ============================================================
 # File:   04a_Regression_RQ3.R
-# Project: LMU Social Media 2025
+# Project: Social Media as an Information Source for Older Adults
 # Author: Martin Fischer
-# Date:   2025-09-12
+# Date:   2025-10-02
 # Purpose:
-#   - Regression analyses of social media survey dataset
-#   - All outputs use standardized Beta coefficients
+#   - RQ3 regressions (perceptions -> info use), standardized betas
 # ============================================================
 
-# -------------------------
-# Packages ----------------
-# -------------------------
+# --- Setup -----------------------------------------------------------------
+
 rm(list = ls(all = TRUE))
 if(!require(pacman)) install.packages("pacman")
 pacman::p_unload("all")
 
 pacman::p_load(
-  tidyverse, report, texreg, dplyr, ggcorrplot, viridis, extrafont, 
-  lm.beta, car, ggplot2, ggfortify, lmtest, GGally, ggeffects,
-  knitr, kableExtra, sandwich, htmltools
-)
+  tidyverse, texreg, lm.beta, sandwich, lmtest, kableExtra,
+  ggcorrplot, car, knitr)
 
-# Load helper functions (to_fac, to_num)
-source("02_Scripts/Helpers.R")  # Load functions
+source("02_Scripts/Helpers.R")  # to_fac, to_num
 
-# -------------------------
-# Fonts -------------------
-# -------------------------
-font_import(paths = "C:/WINDOWS/Fonts", pattern = "times.ttf", prompt = FALSE)
-loadfonts(device = "win")
+# --- Fonts (only for Windows) ----------------------------------------------
 
-# -------------------------
-# Load Data ----------------
-# -------------------------
+# font_import(paths = "C:/WINDOWS/Fonts", pattern = "times.ttf", prompt = FALSE)
+# loadfonts(device = "win")
+
+# --- Data ------------------------------------------------------------------
+
 df <- readRDS("01_Data/social_media_2025_scored.rds")
 
-# -------------------------
-# Create platform-specific usage variable
-# -------------------------
+# --- Platform controls -----------------------------------------------------
 df <- df %>%
   mutate(platform_usage = case_when(
     platform_helper == 1 ~ facebook_usage,   # Facebook
     platform_helper == 2 ~ instagram_usage,  # Instagram
-    platform_helper == 3 ~ x_usage,          # X (ehemals Twitter)
-    platform_helper == 4 ~ tiktok_usage,     # TikTok
-    platform_helper == 5 ~ youtube_usage,    # YouTube
-    TRUE ~ NA_real_                           # sonst NA
-  ))
-
-df <- df %>%
+    TRUE ~ NA_real_                          # X/YouTube/TikTok --> NA
+  )) %>% 
   mutate(platform_helper = factor(platform_helper,
-                                  levels = 1:5,
-                                  labels = c("Facebook", "Instagram", "X", "TikTok", "YouTube")))
+                                  levels = c(2, 1),
+                                  labels = c("Instagram", "Facebook")))
 
-# -------------------------
-# Create Directories -------
-# -------------------------
+# --- Directories -----------------------------------------------------------
+
 dir.create("04_Figures", showWarnings = FALSE)
 dir.create("04_Figures/Individual_Scatter_Plots", showWarnings = FALSE)
 dir.create("04_Figures/Facet_Grids", showWarnings = FALSE)
@@ -63,9 +48,8 @@ dir.create("04_Figures/RQ3", showWarnings = FALSE)
 dir.create("03_Output", showWarnings = FALSE)
 dir.create("03_Output/RQ3", showWarnings = FALSE)
 
-# -------------------------
-# Define Indices ----------
-# -------------------------
+# --- Indices ---------------------------------------------------------------
+
 predictor_indices <- c(
   "idx_implicit", "idx_explicit", "idx_sociality", "idx_incidentalness",
   "idx_snacking", "idx_engagement", "idx_curation"
@@ -82,12 +66,10 @@ info_labels <- c(
   "Group-related Information Use"
 )
 
+# --- 1. Scatterplots & facet grids ----------------------------------------
 
-# -------------------------
-# 1. Scatterplots & Facet Grids
-# -------------------------
 for(pred in predictor_indices){
-  # Individual Scatterplots
+  # Individual scatterplots
   for(dv in info_indices){
     p <- ggplot(df, aes_string(x = pred, y = dv)) +
       geom_jitter(width = 0.1, height = 0.1, alpha = 0.6) +
@@ -100,7 +82,7 @@ for(pred in predictor_indices){
            plot = p, width = 14, height = 10, dpi = 300)
   }
   
-  # Facet Grids
+  # Facet grids
   df_long <- df %>%
     pivot_longer(cols = all_of(info_indices), names_to = "DV", values_to = "value")
   
@@ -116,10 +98,8 @@ for(pred in predictor_indices){
          plot = p, width = 20, height = 12, dpi = 300)
 }
 
-# -------------------------
-# 2. Correlation Plots
-# -------------------------
-# Substantial predictors (for regression)
+# --- 2. Correlation Plots (numeric predictors) -----------------------------
+
 df_corr <- df %>%
   select(age_years, gender_binary, education_cat, platform_helper,
          idx_implicit, idx_explicit, idx_sociality, idx_incidentalness) %>%
@@ -145,27 +125,27 @@ cplot <- ggcorrplot(
 ggsave(filename = "04_Figures/RQ3/corrplot_model_predictors.png",
        plot = cplot, width = 2000, height = 2000, units = "px")
 
-# -------------------------
-# 3. Regression Models (RQ3)
-# -------------------------
+# --- 3. Regression Models --------------------------------------------------
+
 model_list <- list()
 
 for(dv in info_indices){
-  # Block 0
-  m0 <- lm(as.formula(paste(dv, "~ age_years + gender_binary + education_cat + platform_helper + platform_usage")), data = df)
-  # Block 1
-  m1 <- update(m0, . ~ . + idx_implicit + idx_explicit + idx_sociality + idx_incidentalness)
+  # Block 0: controls (SD, questionnaire platform, usage frequency)
+  m0 <- lm(as.formula(paste(dv, "~ age_years + gender_binary + education_cat + 
+           platform_helper + platform_usage")), data = df)
+  # Block 1: + perceptions
+  m1 <- update(m0, . ~ . + idx_implicit + idx_explicit + idx_sociality + 
+               idx_incidentalness)
   
   model_list[[paste0(dv, "_0")]] <- m0
   model_list[[paste0(dv, "_1")]] <- m1
 }
 
-# Function: standardize models
+# Standardize models
 get_std_models <- function(models) lapply(models, lm.beta)
 
-# -------------------------
-# 4. Markdown output per DV
-# -------------------------
+# --- 4. Markdown output per DV ---------------------------------------------
+
 for(dv in info_indices){
   models_to_report <- list(model_list[[paste0(dv, "_0")]], model_list[[paste0(dv, "_1")]])
   models_std <- get_std_models(models_to_report)
@@ -207,9 +187,8 @@ for(dv in info_indices){
   coef_df %>% kable(format = "markdown") %>% cat(file = md_file, append = TRUE, sep = "\n")
 }
 
-# -------------------------
-# 5. HTML combined tables
-# -------------------------
+# --- 5. HTML combined tables -----------------------------------------------
+
 html_file <- "03_Output/RQ3/All_Info_Models.html"
 cat('<html>
 <head>
@@ -234,9 +213,11 @@ h2 { text-align: center; }
 for(i in seq_along(info_indices)){
   dv <- info_indices[i]
   dv_label <- info_labels[i]
-  models_std <- get_std_models(list(model_list[[paste0(dv, "_0")]], model_list[[paste0(dv, "_1")]]))
+  models_std <- get_std_models(list(model_list[[paste0(dv, "_0")]], 
+                                    model_list[[paste0(dv, "_1")]]))
   
-  cat(paste0('<div class="table-box"><h2>', dv_label, '</h2>\n'), file = html_file, append = TRUE)
+  cat(paste0('<div class="table-box"><h2>', dv_label, '</h2>\n'), 
+      file = html_file, append = TRUE)
   
   tmp <- tempfile(fileext = ".html")
   texreg::htmlreg(models_std, single.row = TRUE, digits = 2,
@@ -253,17 +234,16 @@ for(i in seq_along(info_indices)){
 
 cat('</div>\n</body>\n</html>', file = html_file, append = TRUE)
 
-# -------------------------
-# 6. Robust SE for Block 1
-# -------------------------
+# --- 6. Robust SE for Block 1 ----------------------------------------------
+
 robust_beta_list <- list()
 
 for(dv in info_indices){
   model <- model_list[[paste0(dv, "_1")]]  # Original lm
-  # Robuste SE
+  # Robust SE
   robust_se <- sqrt(diag(vcovHC(model, type = "HC3")))
   
-  # Standardisierte Beta
+  # Standardized Beta
   std_beta <- lm.beta(model)$standardized.coefficients
   
   coef_df <- tibble(
@@ -275,24 +255,21 @@ for(dv in info_indices){
     p_value = round(2 * pt(-abs(std_beta / robust_se), df = model$df.residual), 3)
   )
   
-  # In Liste speichern
+  # Save in list
   robust_beta_list[[dv]] <- coef_df
 }
 
-# Optional: alle Tabellen zusammenführen
+# Optional: bind all tables
 robust_beta_all <- bind_rows(robust_beta_list)
 
-# Oder in Markdown speichern
+# Or save in Markdown
 robust_beta_all %>% 
   knitr::kable(format = "markdown") %>% 
   cat(file = "03_Output/RQ3/Robust_StdBetas_Block1.md", sep = "\n")
 
+# --- 7. Check model requirements ----------------------------------
 
-# -------------------------
-# 7. Check model requirements und speichern
-# -------------------------
-
-# Liste für alle Modelle
+# List for all models
 requirements_list <- list()
 
 for(dv in info_indices){
@@ -304,17 +281,13 @@ for(dv in info_indices){
   }
 }
 
-# Zusammenführen
+#Bind and save overview
 requirements_all <- bind_rows(requirements_list)
 
-# In Markdown speichern
 requirements_all %>%
   select(DV, Block, Shapiro_Wilk_p, Shapiro_Wilk_Result,
          Max_VIF, VIF_Result, Breusch_Pagan_p, BP_Result, Model_Call) %>%
   knitr::kable(format = "markdown") %>%
   cat(file = "03_Output/RQ3/Model_Requirements.md", sep = "\n")
 
-
-# -------------------------
-# End of RQ3
-# -------------------------
+# --- End of RQ3 ------------------------------------------------------------
