@@ -14,7 +14,7 @@ if (!require("pacman")) install.packages("pacman")
 rm(list = ls())
 gc()
 
-pacman::p_load(tidyverse, tidycomm, psych, dplyr)
+pacman::p_load(tidyverse, psych, tidycomm, dplyr)
 
 source("02_Scripts/Helpers.R")  # to_fac, to_num, omega_h, 
                                 # choose_items_by_omega, spearman_brown_2items
@@ -166,46 +166,34 @@ saveRDS(data_idx, file = file.path("01_Data", "social_media_2025_scored.rds"))
 # --- Sociodemographic composition and sample characteristics----------------
 
 # Age
-data_idx %>% 
-  describe(age_years)
+tidycomm::describe(data_idx, age_years)
 
 # Gender
-data_idx  %>% 
-  tab_frequencies(gender_binary)
+tidycomm::tab_frequencies(data_idx, gender_binary)
 
 # Education
-data_idx  %>% 
-  tab_frequencies(education_cat)
+tidycomm::tab_frequencies(data_idx, education_cat)
 
-data_idx  %>% 
-  tab_frequencies(school_degree)
+tidycomm::tab_frequencies(data_idx, school_degree)
 
 # Income
-data_idx %>% 
-  tab_frequencies(household_income)
+tidycomm::tab_frequencies(data_idx, household_income)
 
 # Social media use: usage frequency per platform
-data_idx %>% 
-  tab_frequencies(facebook_usage)
+tidycomm::tab_frequencies(data_idx, facebook_usage)
 
-data_idx %>% 
-  tab_frequencies(instagram_usage)
+tidycomm::tab_frequencies(data_idx, instagram_usage)
 
-data_idx %>% 
-  tab_frequencies(x_usage)
+tidycomm::tab_frequencies(data_idx, x_usage)
 
-data_idx %>% 
-  tab_frequencies(tiktok_usage)
+tidycomm::tab_frequencies(data_idx, tiktok_usage)
 
-data_idx %>% 
-  tab_frequencies(youtube_usage)
+tidycomm::tab_frequencies(data_idx, youtube_usage)
 
 # Social media use: questionnaire platform
-data_idx %>% 
-  tab_frequencies(platform_helper)
+tidycomm::tab_frequencies(data_idx, platform_helper)
 
 # Social media use: platforms used
-
 platform_vars <- c("facebook_usage","instagram_usage","x_usage","tiktok_usage",
                    "youtube_usage")
 
@@ -233,27 +221,25 @@ top_combos <- platforms_used %>%
 
 top_combos
 
-# --- RQ1: Descriptive Analysis of Perceptions-------------------------------
+# --- RQ1: Descriptive Analysis of Usefulness Perceptions--------------------
 
-data_idx %>% 
- describe(idx_implicit)
+tidycomm::describe(data_idx, idx_implicit)
 
-data_idx %>% 
-  describe(idx_explicit)
+tidycomm::describe(data_idx, idx_explicit)
 
-data_idx %>% 
-  describe(idx_incidentalness)
+tidycomm::describe(data_idx, idx_incidentalness)
 
-data_idx %>% 
-  describe(idx_sociality)
+tidycomm::describe(data_idx, idx_sociality)
+
+# Explorative Analysis: Differences between platforms + users
 
 # --- RQ2: Descriptive Analysis of Practices --------------------------------
 
-data_idx %>% 
-  describe(idx_engagement)
+tidycomm::describe(data_idx, idx_engagement)
 
-data_idx %>% 
-  describe(idx_curation)
+tidycomm::describe(data_idx, idx_curation)
 
-data_idx %>% 
-  describe(idx_snacking)
+# Explorative Analysis: Differences between platforms + users
+
+
+tidycomm::describe(data_idx, idx_snacking)
