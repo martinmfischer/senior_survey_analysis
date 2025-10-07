@@ -41,7 +41,30 @@ data_rev <- clean_data %>% reverse_scale(implicit_2,
                              lower_end = 5,
                              upper_end = 1)
 
-# --- Indices (tidycomm) ----------------------------------------------------
+# --- Recode curation-items -------------------------------------------------
+# Note: Checkbox-Scale, 'selected' was coded inconsistently (1 - 6)
+
+curation_opts <- paste0("curation_", 1:6)
+data_rev <- data_rev %>%
+  mutate(
+    across(all_of(curation_opts),
+           ~ dplyr::case_when(
+             is.na(.)           ~ NA_integer_,   
+             . == 0             ~ 0L,            
+             TRUE               ~ 1L            
+           ),
+           .names = "{.col}_bin"
+    ),
+
+    curation_none = dplyr::case_when(
+      is.na(curation_7)      ~ NA_integer_,
+      curation_7 == 90       ~ 1L,    
+      curation_7 == 0        ~ 0L,
+      TRUE                   ~ NA_integer_
+    )
+  )
+
+# --- Indices ---------------------------------------------------------------
 
 data_idx <- data_rev %>%
   # Perceived usefulness
@@ -67,8 +90,8 @@ data_idx <- data_rev %>%
             engagement_1, engagement_2, engagement_3, engagement_4,
             cast.numeric = TRUE) %>%
   add_index(idx_curation, 
-            curation_1, curation_2, curation_3, curation_4, curation_5, curation_6, 
-            curation_7,
+            curation_1_bin, curation_2_bin, curation_3_bin, curation_4_bin,
+            curation_5_bin, curation_6_bin,
             cast.numeric = TRUE) %>%
   # Information use (2-item indices)
   add_index(idx_info_undirected, undirected_news, undirected_life,           
@@ -93,8 +116,8 @@ pp_scales <- list(
   snacking       = c("snacking_1","snacking_2_rev","snacking_3","snacking_4_rev",
                      "snacking_5","snacking_6_rev","snacking_7_rev","snacking_8"),
   engagement     = c("engagement_1","engagement_2","engagement_3","engagement_4"),
-  curation       = c("curation_1","curation_2","curation_3","curation_4","curation_5",
-                     "curation_6","curation_7")
+  curation       = c("curation_1_bin","curation_2_bin","curation_3_bin",
+                     "curation_4_bin","curation_5_bin", "curation_6_bin")
 )
 
 omega_results <- imap_dfr(pp_scales, ~ {
@@ -108,7 +131,7 @@ omega_results <- imap_dfr(pp_scales, ~ {
 })
 
 omega_results
-# Note: 'explicit' remains < .70 even after drop-one; others ≥ .70
+# Note: 'explicit' and 'curation' remain < .70 even after drop-one; others ≥ .70
 
 # Spearman-Brown for information uses
 info_scales <- list(
