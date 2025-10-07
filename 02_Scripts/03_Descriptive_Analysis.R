@@ -8,7 +8,7 @@
 #   - Descriptive analyses (sample characteristics, RQ1, RQ2)
 # ============================================================
 
-# Setup ---------------------------------------------------------------------
+# --- Setup ------------------------------------------------------------------
 
 if (!require("pacman")) install.packages("pacman")
 rm(list = ls())
@@ -19,24 +19,38 @@ pacman::p_load(tidyverse, psych, tidycomm, dplyr)
 source("02_Scripts/Helpers.R")  # to_fac, to_num, omega_h, 
                                 # choose_items_by_omega, spearman_brown_2items
 
-# Load clean data -----------------------------------------------------------
+# --- Load clean data --------------------------------------------------------
 
 clean_data <- readRDS("01_Data/social_media_2025_clean_renamed.rds")
 
-# Reverse-code items (Likert 1–5) -------------------------------------------
+# --- Reverse-code items (Likert 1–5) ----------------------------------------
 # Note: reverse_scale creates *_rev columns; here 1<->5 mapping
+# Important: recoded *not* the intial reversed items since 
+# Infas coded "1" with "fully agree" and "5" with "don't agree at all"
 
-data_rev <- clean_data %>% reverse_scale(implicit_2,
-                             implicit_4,
-                             explicit_4,
-                             incidentalness_2,
-                             incidentalness_5,
-                             sociality_2,
-                             sociality_5,
-                             snacking_2,
-                             snacking_4,
-                             snacking_6,
-                             snacking_7,
+data_rev <- clean_data %>% reverse_scale(implicit_1,
+                             implicit_3,
+                             explicit_1,
+                             explicit_2,
+                             explicit_3,
+                             incidentalness_1,
+                             incidentalness_3,
+                             incidentalness_4,
+                             sociality_1,
+                             sociality_3,
+                             sociality_4,
+                             snacking_1,
+                             snacking_3,
+                             snacking_5,
+                             snacking_8,
+                             undirected_news,
+                             undirected_life,
+                             problem_specific_need,
+                             problem_solving,
+                             topic_interests,
+                             topic_hobbies,
+                             group_close,
+                             group_extended,
                              ### select lower and upper bound for recode
                              lower_end = 5,
                              upper_end = 1)
@@ -69,22 +83,22 @@ data_rev <- data_rev %>%
 data_idx <- data_rev %>%
   # Perceived usefulness
   add_index(idx_implicit,
-            implicit_1, implicit_2_rev, implicit_3, implicit_4_rev,
+            implicit_1_rev, implicit_2, implicit_3_rev, implicit_4,
             cast.numeric = TRUE) %>%
   add_index(idx_explicit,
-            explicit_1, explicit_2, explicit_3, explicit_4_rev,
+            explicit_1_rev, explicit_2_rev, explicit_3_rev, explicit_4,
             cast.numeric = TRUE) %>%
   add_index(idx_incidentalness,
-            incidentalness_1, incidentalness_2_rev, incidentalness_3, incidentalness_4, 
-            incidentalness_5_rev,
+            incidentalness_1_rev, incidentalness_2, incidentalness_3_rev, 
+            incidentalness_4_rev, incidentalness_5,
             cast.numeric = TRUE) %>%
   add_index(idx_sociality,
-            sociality_1, sociality_2_rev, sociality_3, sociality_4, sociality_5_rev,
-            cast.numeric = TRUE) %>%
+            sociality_1_rev, sociality_2, sociality_3_rev, sociality_4_rev, 
+            sociality_5, cast.numeric = TRUE) %>%
   # Practices
   add_index(idx_snacking, 
-            snacking_1, snacking_2_rev, snacking_3, snacking_4_rev,
-            snacking_5, snacking_6_rev, snacking_7_rev, snacking_8,
+            snacking_1_rev, snacking_2, snacking_3_rev, snacking_4,
+            snacking_5_rev, snacking_6, snacking_7, snacking_8_rev,
             cast.numeric = TRUE) %>%
   add_index(idx_engagement, 
             engagement_1, engagement_2, engagement_3, engagement_4,
@@ -94,27 +108,27 @@ data_idx <- data_rev %>%
             curation_5_bin, curation_6_bin,
             cast.numeric = TRUE) %>%
   # Information use (2-item indices)
-  add_index(idx_info_undirected, undirected_news, undirected_life,           
+  add_index(idx_info_undirected, undirected_news_rev, undirected_life_rev,           
             cast.numeric = TRUE) %>%
-  add_index(idx_info_topic,      topic_interests, topic_hobbies,             
+  add_index(idx_info_topic,      topic_interests_rev, topic_hobbies_rev,             
             cast.numeric = TRUE) %>%
-  add_index(idx_info_problem,    problem_specific_need, problem_solving,           
+  add_index(idx_info_problem,    problem_specific_need_rev, problem_solving_rev,           
             cast.numeric = TRUE) %>%
-  add_index(idx_info_group,      group_close, group_extended,            
+  add_index(idx_info_group,      group_close_rev, group_extended_rev,            
             cast.numeric = TRUE)
 
 # --- Reliability (psych) ---------------------------------------------------
 
 # ωh (drop-one only if ωh < .70) for perceptions and practices
 pp_scales <- list(
-  implicit       = c("implicit_1","implicit_2_rev","implicit_3","implicit_4_rev"),
-  explicit       = c("explicit_1","explicit_2","explicit_3","explicit_4_rev"),
-  incidentalness = c("incidentalness_1","incidentalness_2_rev","incidentalness_3",
-                     "incidentalness_4","incidentalness_5_rev"),
-  sociality      = c("sociality_1","sociality_2_rev","sociality_3","sociality_4",
-                     "sociality_5_rev"),
-  snacking       = c("snacking_1","snacking_2_rev","snacking_3","snacking_4_rev",
-                     "snacking_5","snacking_6_rev","snacking_7_rev","snacking_8"),
+  implicit       = c("implicit_1_rev","implicit_2","implicit_3_rev","implicit_4"),
+  explicit       = c("explicit_1_rev","explicit_2_rev","explicit_3_rev","explicit_4"),
+  incidentalness = c("incidentalness_1_rev","incidentalness_2","incidentalness_3_rev",
+                     "incidentalness_4_rev","incidentalness_5"),
+  sociality      = c("sociality_1_rev","sociality_2","sociality_3_rev","sociality_4_rev",
+                     "sociality_5"),
+  snacking       = c("snacking_1_rev","snacking_2","snacking_3_rev","snacking_4",
+                     "snacking_5_rev","snacking_6","snacking_7","snacking_8_rev"),
   engagement     = c("engagement_1","engagement_2","engagement_3","engagement_4"),
   curation       = c("curation_1_bin","curation_2_bin","curation_3_bin",
                      "curation_4_bin","curation_5_bin", "curation_6_bin")
@@ -135,10 +149,10 @@ omega_results
 
 # Spearman-Brown for information uses
 info_scales <- list(
-  info_undirected = c("undirected_news","undirected_life"),
-  info_topic      = c("topic_interests","topic_hobbies"),
-  info_problem    = c("problem_specific_need","problem_solving"),
-  info_group      = c("group_close","group_extended")
+  info_undirected = c("undirected_news_rev","undirected_life_rev"),
+  info_topic      = c("topic_interests_rev","topic_hobbies_rev"),
+  info_problem    = c("problem_specific_need_rev","problem_solving_rev"),
+  info_group      = c("group_close_rev","group_extended_rev")
 )
 
 sb_results <- purrr::imap_dfr(info_scales, ~ {
