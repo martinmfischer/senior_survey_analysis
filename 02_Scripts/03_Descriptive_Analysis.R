@@ -223,7 +223,7 @@ platform_vars <- c("facebook_usage","instagram_usage","x_usage","tiktok_usage",
 data_idx <- data_idx %>%
   mutate(across(all_of(platform_vars),
                 ~ if_else(between(to_num(.), 1, 7), 1L, 0L, missing = 0L),
-                .names = "{.col}_use"))
+                .names = "{.col}_overall_use"))
 
 platforms_used <- data_idx %>%
   mutate(id = row_number()) %>%
@@ -258,11 +258,58 @@ tidycomm::describe(data_idx, idx_sociality)
 
 # --- RQ2: Descriptive Analysis of Practices --------------------------------
 
+# Engagement: Mean index & frequencies of individual engagement practices
 tidycomm::describe(data_idx, idx_engagement)
 
+engagement_vars <- c("engagement_1","engagement_2","engagement_3","engagement_4")
+
+data_idx <- data_idx %>%
+  mutate(across(
+    all_of(engagement_vars),
+    ~ case_when(
+      between(as.integer(.), 1, 4) ~ "often",
+      between(as.integer(.), 5, 7) ~ "rarely",
+      as.integer(.) == 8           ~ "never",
+      TRUE                         ~ NA_character_
+    ),
+    .names = "{.col}_overall_use"
+  ))
+
+engagement_overall_vars <- c("engagement_1_overall_use","engagement_2_overall_use",
+                     "engagement_3_overall_use","engagement_4_overall_use")
+
+engagement_frequencies <- data_idx %>%
+  select(all_of(engagement_overall_vars)) %>%
+  pivot_longer(everything(), names_to = "item", values_to = "value") %>%
+  filter(!is.na(value)) %>%                 
+  count(item, value, name = "n") %>%
+  group_by(item) %>%
+  mutate(percent = n / sum(n)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = value,
+              values_from = c(n, percent),
+              names_prefix = "val_")
+
+engagement_frequencies
+
+# Curation: Mean index & frequencies of individual curation practices
 tidycomm::describe(data_idx, idx_curation)
 
-# Explorative Analysis: Differences between platforms + users
+curation_vars <- paste0("curation_", 1:6, "_bin")
 
+curation_frequencies <- data_idx %>%
+  select(all_of(curation_vars)) %>%
+  pivot_longer(everything(), names_to = "item", values_to = "value") %>%
+  filter(!is.na(value)) %>%                 
+  count(item, value, name = "n") %>%
+  group_by(item) %>%
+  mutate(percent = n / sum(n)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = value,
+              values_from = c(n, percent),
+              names_prefix = "val_")
 
+curation_frequencies
+
+# Snacking: Mean index
 tidycomm::describe(data_idx, idx_snacking)
