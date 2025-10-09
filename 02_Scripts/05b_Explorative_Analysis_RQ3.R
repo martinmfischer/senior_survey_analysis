@@ -1,10 +1,10 @@
 # ============================================================
-# File:   04a_Regression_RQ3.R
+# File:   05a_Explorative_Analysis_RQ3.R
 # Project: Social Media as an Information Source for Older Adults
-# Author: Martin Fischer
-# Date:   2025-10-02
+# Author: Luise Anter
+# Date:   2025-10-08
 # Purpose:
-#   - RQ3 regressions (perceptions -> info use), standardized betas
+#   - Explorative analysis: RQ3 with YouTube
 # ============================================================
 
 # --- Setup -----------------------------------------------------------------
@@ -13,40 +13,35 @@ rm(list = ls(all = TRUE))
 if(!require(pacman)) install.packages("pacman")
 pacman::p_unload("all")
 
-pacman::p_load(
-  tidyverse, texreg, lm.beta, sandwich, lmtest, kableExtra,
-  ggcorrplot, car, knitr, extrafont)
+pacman::p_load(tidyverse, tidycomm, dplyr, texreg, lm.beta, sandwich, lmtest, kableExtra,
+               ggcorrplot, car, knitr, extrafont, emmeans)
 
 source("02_Scripts/Helpers.R")  # to_fac, to_num
-
-# --- Fonts (only for Windows) ----------------------------------------------
-
-# font_import(paths = "C:/WINDOWS/Fonts", pattern = "times.ttf", prompt = FALSE)
-# loadfonts(device = "win")
 
 # --- Data ------------------------------------------------------------------
 
 df <- readRDS("01_Data/social_media_2025_scored.rds")
+
+# --- EA 1: RQ3-Regression (DV = Info Use) with YouTube ---------------------
 
 # --- Platform controls -----------------------------------------------------
 df <- df %>%
   mutate(platform_usage = case_when(
     platform_helper == 1 ~ facebook_usage_rev,   # Facebook
     platform_helper == 2 ~ instagram_usage_rev,  # Instagram
-    TRUE ~ NA_real_                              # X/YouTube/TikTok --> NA
+    platform_helper == 5 ~ youtube_usage_rev,    # YouTube
+    TRUE ~ NA_real_                              # X/TikTok --> NA
   )) %>% 
   mutate(platform_helper = factor(platform_helper,
-                                  levels = c(2, 1),
-                                  labels = c("Instagram", "Facebook")))
+                                  levels = c(2, 1, 5),
+                                  labels = c("Instagram", "Facebook", "YouTube")))
 
 # --- Directories -----------------------------------------------------------
 
-dir.create("04_Figures", showWarnings = FALSE)
-dir.create("04_Figures/Individual_Scatter_Plots", showWarnings = FALSE)
-dir.create("04_Figures/Facet_Grids", showWarnings = FALSE)
-dir.create("04_Figures/RQ3", showWarnings = FALSE)
-dir.create("03_Output", showWarnings = FALSE)
-dir.create("03_Output/RQ3", showWarnings = FALSE)
+dir.create("04_Figures/Explorative_Analyses/RQ3/Individual_Scatter_Plots", showWarnings = FALSE)
+dir.create("04_Figures/Explorative_Analyses/RQ3/Facet_Grids", showWarnings = FALSE)
+dir.create("04_Figures/Explorative_Analyses/RQ3", showWarnings = FALSE)
+dir.create("03_Output/Explorative_Analyses/RQ3", showWarnings = FALSE)
 
 # --- Indices ---------------------------------------------------------------
 
@@ -78,8 +73,8 @@ for(pred in predictor_indices){
            x = gsub("_", " ", pred), y = gsub("_", " ", dv)) +
       theme_minimal()
     
-    ggsave(filename = paste0("04_Figures/Individual_Scatter_Plots/", pred, "_vs_", dv, ".png"),
-           plot = p, width = 14, height = 10, dpi = 300)
+    ggsave(filename = paste0("04_Figures/Explorative_Analyses/RQ3/Individual_Scatter_Plots/", 
+                             pred, "_vs_", dv, ".png"), plot = p, width = 14, height = 10, dpi = 300)
   }
   
   # Facet grids
@@ -94,8 +89,8 @@ for(pred in predictor_indices){
          x = gsub("_", " ", pred), y = "Information Use") +
     theme_minimal()
   
-  ggsave(filename = paste0("04_Figures/Facet_Grids/", pred, "_facetgrid_info.png"),
-         plot = p, width = 20, height = 12, dpi = 300)
+  ggsave(filename = paste0("04_Figures/Explorative_Analyses/RQ3/Facet_Grids/", 
+                           pred, "_facetgrid_info.png"),plot = p, width = 20, height = 12, dpi = 300)
 }
 
 # --- 2. Correlation Plots (numeric predictors) -----------------------------
@@ -122,7 +117,7 @@ cplot <- ggcorrplot(
   scale_x_discrete(labels = custom_labels) +
   scale_y_discrete(labels = custom_labels)
 
-ggsave(filename = "04_Figures/RQ3/corrplot_model_predictors.png",
+ggsave(filename = "04_Figures/Explorative_Analyses/RQ3/corrplot_model_predictors.png",
        plot = cplot, width = 2000, height = 2000, units = "px")
 
 # --- 3. Regression Models --------------------------------------------------
@@ -135,7 +130,7 @@ for(dv in info_indices){
            platform_helper + platform_usage")), data = df)
   # Block 1: + perceptions
   m1 <- update(m0, . ~ . + idx_implicit + idx_explicit + idx_sociality + 
-               idx_incidentalness)
+                 idx_incidentalness)
   
   model_list[[paste0(dv, "_0")]] <- m0
   model_list[[paste0(dv, "_1")]] <- m1
@@ -150,7 +145,7 @@ for(dv in info_indices){
   models_to_report <- list(model_list[[paste0(dv, "_0")]], model_list[[paste0(dv, "_1")]])
   models_std <- get_std_models(models_to_report)
   
-  md_file <- paste0("03_Output/RQ3/Models_", dv, ".md")
+  md_file <- paste0("03_Output/Explorative_Analyses/RQ3/Models_", dv, ".md")
   cat("---\n",
       "title: 'Regression Results for ", dv, "'\n",
       "output: html_document\n",
@@ -168,6 +163,23 @@ for(dv in info_indices){
   cat("\n\n## Model Coefficients (Standardized Betas)\n\n", file = md_file, append = TRUE)
   texreg_txt <- capture.output(texreg::screenreg(models_std, single.row = TRUE, digits = 3))
   cat(texreg_txt, sep = "\n", file = md_file, append = TRUE)
+  
+  #Posthoc pairwise platform comparisons
+  m_full <- model_list[[paste0(dv, "_1")]]
+  emm <- emmeans(m_full, ~ platform_helper,
+                 vcov. = sandwich::vcovHC(m_full, type = "HC3"))
+  ph <- pairs(emm, adjust = "tukey") |> as.data.frame()
+  cat("\n\n## Post-hoc comparisons (adjusted)\n\n", file = md_file, append = TRUE)
+  knitr::kable(ph, format = "markdown", digits = 3) |>
+    paste(collapse = "\n") |>
+    cat(file = md_file, append = TRUE, sep = "\n")
+  es <- eff_size(emm, method = "pairwise",
+                 sigma = sigma(m_full), edf = df.residual(m_full)) |>
+    as.data.frame()
+  cat("\n\n## Effect sizes (Cohen's d)\n\n", file = md_file, append = TRUE)
+  knitr::kable(es, format = "markdown", digits = 3) |>
+    paste(collapse = "\n") |>
+    cat(file = md_file, append = TRUE, sep = "\n")
   
   # Detailed coefficients table
   coef_list <- lapply(seq_along(models_std), function(i){
@@ -189,10 +201,10 @@ for(dv in info_indices){
 
 # --- 5. HTML combined tables -----------------------------------------------
 
-html_file <- "03_Output/RQ3/All_Info_Models.html"
+html_file <- "03_Output/Explorative_Analyses/RQ3/All_Info_Models.html"
 cat('<html>
 <head>
-<title>Regression Results RQ3</title>
+<title>Regression Results RQ3 Explorative Analyses</title>
 <style>
 .container {
   display: flex;
@@ -265,9 +277,9 @@ robust_beta_all <- bind_rows(robust_beta_list)
 # Or save in Markdown
 robust_beta_all %>% 
   knitr::kable(format = "markdown") %>% 
-  cat(file = "03_Output/RQ3/Robust_StdBetas_Block1.md", sep = "\n")
+  cat(file = "03_Output/Explorative_Analyses/RQ3/Robust_StdBetas_Block1.md", sep = "\n")
 
-# --- 7. Check model requirements ----------------------------------
+# --- 7. Check model requirements -------------------------------------------
 
 # List for all models
 requirements_list <- list()
@@ -288,6 +300,6 @@ requirements_all %>%
   select(DV, Block, Shapiro_Wilk_p, Shapiro_Wilk_Result,
          Max_VIF, VIF_Result, Breusch_Pagan_p, BP_Result, Model_Call) %>%
   knitr::kable(format = "markdown") %>%
-  cat(file = "03_Output/RQ3/Model_Requirements.md", sep = "\n")
+  cat(file = "03_Output/Explorative_Analyses/RQ3/Model_Requirements.md", sep = "\n")
 
-# --- End of RQ3 ------------------------------------------------------------
+# --- End of Script ---------------------------------------------------------

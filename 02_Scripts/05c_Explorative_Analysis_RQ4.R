@@ -1,10 +1,10 @@
 # ============================================================
-# File:   04a_Regression_RQ4.R
+# File:   05b_Explorative_Analysis_RQ4.R
 # Project: Social Media as an Information Source for Older Adults
-# Author: Martin Fischer
-# Date:   2025-10-02
+# Author: Luise Anter
+# Date:   2025-10-08
 # Purpose:
-#   - RQ4 regressions (info use -> practices), standardized beta
+#   - Explorative analysis: RQ4 with YouTube
 # ============================================================
 
 # --- Setup -----------------------------------------------------------------
@@ -15,7 +15,7 @@ pacman::p_unload("all")
 
 pacman::p_load(
   tidyverse, texreg, lm.beta, sandwich, lmtest, kableExtra,
-  ggcorrplot, car, knitr, extrafont
+  ggcorrplot, car, knitr, extrafont, emmeans
 )
 
 source("02_Scripts/Helpers.R")  # to_fac, to_num
@@ -35,17 +35,17 @@ df <- df %>%
   mutate(platform_usage = case_when(
     platform_helper == 1 ~ facebook_usage_rev,   # Facebook
     platform_helper == 2 ~ instagram_usage_rev,  # Instagram
-    TRUE ~ NA_real_                              # X/YouTube/TikTok --> NA
+    platform_helper == 5 ~ youtube_usage_rev,    # YouTube
+    TRUE ~ NA_real_                              # X/TikTok --> NA
   )) %>% 
   mutate(platform_helper = factor(platform_helper,
-                                  levels = c(2, 1),
-                                  labels = c("Instagram", "Facebook")))
+                                  levels = c(2, 1, 5),
+                                  labels = c("Instagram", "Facebook", "YouTube")))
 
 
 # --- Directories -----------------------------------------------------------
 
-dir.create("04_Figures/RQ4", showWarnings = FALSE)
-dir.create("03_Output/RQ4", showWarnings = FALSE)
+dir.create("03_Output/Explorative_Analyses/RQ4", showWarnings = FALSE)
 
 # --- DVs and Labels --------------------------------------------------------
 
@@ -92,7 +92,7 @@ for(dv_name in names(rq4_dvs)){
                            model_list[[paste0(dv, "_3")]])
   models_std <- get_std_models(models_to_report)
   
-  md_file <- paste0("03_Output/RQ4/Models_", dv, ".md")
+  md_file <- paste0("03_Output/Explorative_Analyses/RQ4/Models_", dv, ".md")
   cat("---\n",
       "title: 'Regression Results for ", dv, "'\n",
       "output: html_document\n",
@@ -110,6 +110,23 @@ for(dv_name in names(rq4_dvs)){
   cat("\n\n## Model Coefficients (Standardized Betas)\n\n", file = md_file, append = TRUE)
   texreg_txt <- capture.output(texreg::screenreg(models_std, single.row = TRUE, digits = 3))
   cat(texreg_txt, sep = "\n", file = md_file, append = TRUE)
+  
+  #Posthoc pairwise platform comparisons
+  m_full <- model_list[[paste0(dv, "_3")]]
+  emm <- emmeans(m_full, ~ platform_helper,
+                 vcov. = sandwich::vcovHC(m_full, type = "HC3"))
+  ph <- pairs(emm, adjust = "tukey") |> as.data.frame()
+  cat("\n\n## Post-hoc comparisons (adjusted)\n\n", file = md_file, append = TRUE)
+  knitr::kable(ph, format = "markdown", digits = 3) |>
+    paste(collapse = "\n") |>
+    cat(file = md_file, append = TRUE, sep = "\n")
+  es <- eff_size(emm, method = "pairwise",
+                 sigma = sigma(m_full), edf = df.residual(m_full)) |>
+    as.data.frame()
+  cat("\n\n## Effect sizes (Cohen's d)\n\n", file = md_file, append = TRUE)
+  knitr::kable(es, format = "markdown", digits = 3) |>
+    paste(collapse = "\n") |>
+    cat(file = md_file, append = TRUE, sep = "\n")
   
   # Detailed coefficients table
   coef_list <- lapply(seq_along(models_std), function(i){
@@ -131,10 +148,10 @@ for(dv_name in names(rq4_dvs)){
 
 # --- 3. HTML combined tables -----------------------------------------------
 
-html_file <- "03_Output/RQ4/All_RQ4_Models.html"
+html_file <- "03_Output/Explorative_Analyses/RQ4/ll_RQ4_EA_Models.html"
 cat('<html>
 <head>
-<title>Regression Results RQ4</title>
+<title>Regression Results RQ4 Explorative Analyses</title>
 <style>
 .container { display: flex; flex-wrap: wrap; justify-content: space-around; }
 .table-box { flex: 0 0 45%; margin-bottom: 20px; }
@@ -195,7 +212,7 @@ robust_beta_all <- bind_rows(robust_beta_list)
 
 robust_beta_all %>% 
   knitr::kable(format = "markdown") %>% 
-  cat(file = "03_Output/RQ4/Robust_StdBetas_Block3.md", sep = "\n")
+  cat(file = "03_Output/Explorative_Analyses/RQ4/Robust_StdBetas_Block3.md", sep = "\n")
 
 # --- 5. Check model requirements -------------------------------------------
 
@@ -224,6 +241,6 @@ requirements_all %>%
   select(DV, Block, Shapiro_Wilk_p, Shapiro_Wilk_Result,
          Max_VIF, VIF_Result, Breusch_Pagan_p, BP_Result, Model_Call) %>%
   knitr::kable(format = "markdown") %>%
-  cat(file = "03_Output/RQ4/Model_Requirements.md", sep = "\n")
+  cat(file = "03_Output/Explorative_Analyses/RQ4/Model_Requirements.md", sep = "\n")
 
 # --- End of RQ4 -------------------------------------------------------------

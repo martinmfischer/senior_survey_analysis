@@ -23,10 +23,11 @@ source("02_Scripts/Helpers.R")  # to_fac, to_num, omega_h,
 
 clean_data <- readRDS("01_Data/social_media_2025_clean_renamed.rds")
 
-# --- Reverse-code items (Likert 1–5) ----------------------------------------
-# Note: reverse_scale creates *_rev columns; here 1<->5 mapping
-# Important: recoded *not* the intial reversed items since 
+# --- Reverse-code items ----------------------------------------------------
+# Note: reverse_scale creates *_rev columns; here 1<->5/1<->8 mapping
+# Important: recoded *not* the initial reversed items since 
 # Infas coded "1" with "fully agree" and "5" with "don't agree at all"
+# and "1" with "several times a day" and "8" with "never"
 
 data_rev <- clean_data %>% reverse_scale(implicit_1,
                              implicit_3,
@@ -335,6 +336,19 @@ top_combos <- platforms_used %>%
   mutate(prop = round(n / sum(n), 3))
 
 top_combos
+
+# Social media use: sociodemographic differences between platforms ----------
+
+anova_age <-data_idx %>% 
+  unianova(platform_helper, age_years, descriptives = TRUE, post_hoc = TRUE)
+
+View(anova_age)
+
+data_idx %>% 
+  crosstab(platform_helper, gender_binary, chi_square = TRUE)
+
+data_idx %>% 
+  crosstab(education_cat, platform_helper, chi_square = TRUE)
 
 # --- RQ1: Descriptive Analysis of Usefulness Perceptions--------------------
 
