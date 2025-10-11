@@ -101,14 +101,26 @@ for(pred in predictor_indices){
 # --- 2. Correlation Plots (numeric predictors) -----------------------------
 
 df_corr <- df %>%
-  select(age_years, gender_binary, education_cat, platform_helper,
-         idx_implicit, idx_explicit, idx_sociality, idx_incidentalness) %>%
+  select(age_years, 
+         gender_binary, 
+         education_cat, 
+         platform_helper,
+         platform_usage,
+         idx_implicit, 
+         idx_explicit, 
+         idx_sociality, 
+         idx_incidentalness) %>%
   mutate(across(where(is.factor), as.numeric))
 
-custom_labels <- c(
-  "Age", "Gender (female)", "Education", "Platform",
-  "Implicit Personalization", "Explicit Personalization",
-  "Sociality", "Incidentalness"
+custom_labels <- c("Age", 
+                   "Gender (female)", 
+                   "Education", 
+                   "Platform",
+                   "Usage Intensity",
+                   "Implicit Personalization", 
+                   "Explicit Personalization",
+                   "Sociality", 
+                   "Incidentalness"
 )
 
 cplot <- ggcorrplot(

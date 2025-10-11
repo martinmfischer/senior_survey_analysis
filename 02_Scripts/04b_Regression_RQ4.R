@@ -55,6 +55,43 @@ rq4_dvs <- c(
   "Curation Practices" = "idx_curation"
 )
 
+# --- 1. Correlation Plots (numeric predictors) -----------------------------
+
+df_corr <- df %>%
+  select(age_years, 
+         gender_binary, 
+         education_cat, 
+         platform_helper,
+         platform_usage,
+         idx_snacking, 
+         idx_engagement, 
+         idx_curation) %>%
+  mutate(across(where(is.factor), as.numeric))
+
+custom_labels <- c("Age", 
+                   "Gender (female)", 
+                   "Education", 
+                   "Platform",
+                   "Usage Intensity",
+                   "Snacking", 
+                   "Engagement",
+                   "Curation"
+)
+
+cplot <- ggcorrplot(
+  cor(df_corr, use = "pairwise.complete.obs"),
+  method = "square",
+  ggtheme = theme_minimal(base_family = "Times New Roman"),
+  title = "Correlation Among Model Predictors",
+  type = "full",
+  lab = TRUE
+) +
+  scale_x_discrete(labels = custom_labels) +
+  scale_y_discrete(labels = custom_labels)
+
+ggsave(filename = "04_Figures/RQ4/corrplot_model_predictors.png",
+       plot = cplot, width = 2000, height = 2000, units = "px")
+
 # --- 1. Regression Models --------------------------------------------------
 
 model_list <- list()

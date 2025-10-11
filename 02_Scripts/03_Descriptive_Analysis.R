@@ -274,8 +274,18 @@ saveRDS(data_idx, file = file.path("01_Data", "social_media_2025_scored.rds"))
 
 # --- Sociodemographic composition and sample characteristics----------------
 
-# Age
+# Age (incl. young-olds vs. old-olds)
 tidycomm::describe(data_idx, age_years)
+
+data_idx <- data_idx %>%
+  mutate(
+    age_binary = case_when(
+      between(age_years, 60, 69) ~ "young-old",
+      between(age_years, 70, 90) ~ "old-old"),
+    age_binary = factor(age_binary, levels = c("young-old","old-old"))
+  )
+
+tidycomm::tab_frequencies(data_idx, age_binary)
 
 # Gender
 tidycomm::tab_frequencies(data_idx, gender_binary)
@@ -343,6 +353,9 @@ anova_age <-data_idx %>%
   unianova(platform_helper, age_years, descriptives = TRUE, post_hoc = TRUE)
 
 View(anova_age)
+
+data_idx %>% 
+  crosstab(platform_helper, age_binary, chi_square = TRUE)
 
 data_idx %>% 
   crosstab(platform_helper, gender_binary, chi_square = TRUE)
