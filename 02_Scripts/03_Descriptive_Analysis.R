@@ -145,7 +145,8 @@ data_idx <- data_rev %>%
             curation_4_bin,
             curation_5_bin, 
             curation_6_bin,
-            cast.numeric = TRUE) %>%
+            cast.numeric = TRUE,
+            type = "sum") %>%
   # Information use (2-item indices)
   add_index(idx_info_undirected, 
             undirected_news_rev,
